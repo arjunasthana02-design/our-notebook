@@ -24,7 +24,7 @@ body{
 
 /* PAGE */
 
-.book{
+.letter-paper{
 
     width:760px;
 
@@ -50,7 +50,7 @@ body{
 
 /* Burnt effect */
 
-.book::before{
+.letter-paper::before{
 
 content:"";
 
@@ -70,7 +70,7 @@ inset 0 0 80px rgba(40,15,5,.15);
 
 /* Dark edges */
 
-.book::after{
+.letter-paper::after{
 
 content:"";
 
@@ -105,7 +105,7 @@ color:#b06c8c;
 
 /* Text */
 
-.content{
+.letter-text{
 
 font-size:24px;
 
@@ -115,7 +115,7 @@ color:#4d3725;
 
 }
 
-.content p{
+.letter-text p{
 
 margin-bottom:38px;
 
@@ -133,7 +133,7 @@ font-weight:bold;
 
 /* Signature */
 
-.signature{
+.letter-signature{
 
 margin-top:60px;
 
@@ -147,7 +147,7 @@ font-style:italic;
 
 /* Button */
 
-.nextButton{
+.letter-continue{
 
 display:block;
 
@@ -171,7 +171,7 @@ transition:.3s;
 
 }
 
-.nextButton:hover{
+.letter-continue:hover{
 
 background:#74425f;
 
