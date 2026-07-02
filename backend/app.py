@@ -142,6 +142,85 @@ app.config.update(mysql_config_from_env())
 mysql = MySQL(app)
 
 
+schema_ready = False
+
+SCHEMA_STATEMENTS = [
+    """
+    CREATE TABLE IF NOT EXISTS meetup_planner
+    (
+        meetup_id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255),
+        description TEXT,
+        location VARCHAR(255),
+        target_date VARCHAR(255),
+        category VARCHAR(100),
+        priority VARCHAR(100),
+        status VARCHAR(100),
+        favourite BOOLEAN DEFAULT FALSE,
+        completed BOOLEAN DEFAULT FALSE
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS chapters
+    (
+        chapter_id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255),
+        summary TEXT,
+        location VARCHAR(255),
+        chapter_date VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        arjun_mood VARCHAR(255),
+        arjun_story TEXT,
+        arjun_favourite VARCHAR(255),
+        bhoomi_mood VARCHAR(255),
+        bhoomi_story TEXT,
+        bhoomi_favourite VARCHAR(255)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS photos
+    (
+        photo_id INT AUTO_INCREMENT PRIMARY KEY,
+        chapter_id INT,
+        photo_path TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS videos
+    (
+        video_id INT AUTO_INCREMENT PRIMARY KEY,
+        chapter_id INT,
+        video_path TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """
+]
+
+
+def ensure_database_schema():
+
+    global schema_ready
+
+    if schema_ready:
+        return
+
+    cur = mysql.connection.cursor()
+
+    for statement in SCHEMA_STATEMENTS:
+        cur.execute(statement)
+
+    mysql.connection.commit()
+    cur.close()
+    schema_ready = True
+
+
+def db_cursor():
+
+    ensure_database_schema()
+    return mysql.connection.cursor()
+
+
 def mysql_config_status():
 
     required_keys = [
@@ -250,7 +329,7 @@ def test_db():
                 "mysql_config": config_status
             }), 500
 
-        cur = mysql.connection.cursor()
+        cur = db_cursor()
 
         cur.execute("SELECT DATABASE();")
 
@@ -321,7 +400,7 @@ def upload_photo(chapter_id):
 
     photo_path = f"/uploads/photos/{filename}"
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute(
         """
@@ -376,7 +455,7 @@ def upload_video(chapter_id):
 
     video_path = f"/uploads/videos/{filename}"
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute(
         """
@@ -417,7 +496,7 @@ def upload_video(chapter_id):
 @app.route("/planner", methods=["GET"])
 def get_planner():
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute("""
 
@@ -478,7 +557,7 @@ def add_planner():
     print(data)
     print("==========================")
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute("""
 
@@ -538,7 +617,7 @@ def update_planner(id):
     print(data)
     print("==========================")
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute("""
 
@@ -592,7 +671,7 @@ def update_planner(id):
 @app.route("/planner/<int:id>", methods=["DELETE"])
 def delete_planner(id):
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute(
 
@@ -652,7 +731,7 @@ def get_media_for_chapters(chapter_ids):
         for chapter_id in chapter_ids
     }
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute(
         f"""
@@ -722,7 +801,7 @@ def chapter_to_dict(row, media=None):
 @app.route("/chapters", methods=["GET"])
 def get_chapters():
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute(f"""
         SELECT
@@ -748,7 +827,7 @@ def get_chapters():
 @app.route("/chapters/<int:id>", methods=["GET"])
 def get_chapter(id):
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute(f"""
         SELECT
@@ -781,7 +860,7 @@ def add_chapter():
 
     data = request.get_json()
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute("""
 
@@ -845,7 +924,7 @@ def update_chapter(id):
 
     data = request.get_json()
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute("""
 
@@ -905,7 +984,7 @@ def update_chapter(id):
 @app.route("/chapters/<int:id>", methods=["DELETE"])
 def delete_chapter(id):
 
-    cur = mysql.connection.cursor()
+    cur = db_cursor()
 
     cur.execute(
 
