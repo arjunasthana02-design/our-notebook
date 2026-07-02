@@ -44,6 +44,14 @@ def first_env(*names, default=None):
     return default
 
 
+def normalize_mysql_host(host):
+
+    if host == "ayabusa.proxy.rlwy.net":
+        return "hayabusa.proxy.rlwy.net"
+
+    return host
+
+
 def mysql_config_from_env():
 
     database_url = first_env(
@@ -61,7 +69,7 @@ def mysql_config_from_env():
         if parsed_url.scheme.startswith("mysql"):
 
             config.update({
-                "MYSQL_HOST": parsed_url.hostname,
+                "MYSQL_HOST": normalize_mysql_host(parsed_url.hostname),
                 "MYSQL_USER": unquote(parsed_url.username or ""),
                 "MYSQL_PASSWORD": unquote(parsed_url.password or ""),
                 "MYSQL_DB": unquote(parsed_url.path.lstrip("/")),
@@ -71,11 +79,13 @@ def mysql_config_from_env():
             return config
 
     config.update({
-        "MYSQL_HOST": first_env(
-            "MYSQLHOST",
-            "MYSQL_HOST",
-            "DB_HOST",
-            "DATABASE_HOST"
+        "MYSQL_HOST": normalize_mysql_host(
+            first_env(
+                "MYSQLHOST",
+                "MYSQL_HOST",
+                "DB_HOST",
+                "DATABASE_HOST"
+            )
         ),
         "MYSQL_USER": first_env(
             "MYSQLUSER",
