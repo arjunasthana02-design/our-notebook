@@ -1,3 +1,4 @@
+import { apiUrl } from "../services/api";
 import { useState, useEffect } from "react";
 import ScrapbookLayout from "../components/ScrapbookLayout";
 import {
@@ -32,7 +33,7 @@ export default function Planner() {
   const loadDreams = async () => {
     try {
 
-      const res = await fetch("http://127.0.0.1:5000/planner");
+      const res = await fetch(apiUrl("/planner"));
 
       const data = await res.json();
 
@@ -84,7 +85,7 @@ export default function Planner() {
 
       if (editingId !== null) {
 
-        await fetch(`http://127.0.0.1:5000/planner/${editingId}`, {
+        await fetch(apiUrl(`/planner/${editingId}`), {
 
           method: "PUT",
 
@@ -104,7 +105,7 @@ export default function Planner() {
 
       } else {
 
-        await fetch("http://127.0.0.1:5000/planner", {
+        await fetch(apiUrl("/planner"), {
 
           method: "POST",
 
@@ -154,7 +155,7 @@ export default function Planner() {
 
     try {
 
-      await fetch(`http://127.0.0.1:5000/planner/${id}`, {
+      await fetch(apiUrl(`/planner/${id}`), {
         method: "DELETE"
       });
 
@@ -206,7 +207,7 @@ export default function Planner() {
 
     try {
 
-      await fetch(`http://127.0.0.1:5000/planner/${id}`, {
+      await fetch(apiUrl(`/planner/${id}`), {
 
         method: "PUT",
 
