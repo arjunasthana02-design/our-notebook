@@ -1,3 +1,4 @@
+import { apiUrl } from "../services/api";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -45,11 +46,15 @@ export default function Login() {
 
     }
 
-    catch {
+    catch (err) {
 
-      setError("Unable to connect to notebook.");
+  console.log(err);
 
-    }
+  alert(err.message);
+
+  setError("Unable to connect to notebook.");
+
+}
 
   };
 
