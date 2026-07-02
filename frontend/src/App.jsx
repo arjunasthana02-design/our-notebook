@@ -37,6 +37,8 @@ function App() {
 
         <Route path="/add-memory" element={<AddMemory />} />
 
+        <Route path="/edit-memory/:id" element={<AddMemory />} />
+
         <Route path="/settings" element={<Settings />} />
 
       </Routes>
