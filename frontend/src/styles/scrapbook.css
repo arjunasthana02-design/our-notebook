@@ -1,0 +1,900 @@
+.scrapbook-shell {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 244, 220, 0.72), transparent 28%),
+    linear-gradient(135deg, #eadfce 0%, #cdb9a0 44%, #8f6c54 100%);
+
+  color: #35261f;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.scrapbook-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 18px;
+
+  padding: 12px clamp(18px, 4vw, 42px);
+
+  background: rgba(64, 43, 32, 0.72);
+
+  color: #fff8ea;
+
+  backdrop-filter: blur(12px);
+
+  box-shadow: 0 10px 24px rgba(48,31,23,.18);
+}
+
+.scrapbook-brand{
+
+  font-size:18px;
+
+  color:#fff8ea;
+
+  text-decoration:none;
+
+  font-weight:600;
+
+}
+
+.scrapbook-links{
+
+  display:flex;
+
+  flex-wrap:wrap;
+
+  justify-content:flex-end;
+
+  gap:8px;
+
+}
+
+.scrapbook-link{
+
+  display:inline-flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  min-height:34px;
+
+  padding:8px 15px;
+
+  border-radius:999px;
+
+  border:1px solid rgba(255,248,234,.28);
+
+  color:#fff8ea;
+
+  text-decoration:none;
+
+  font-size:14px;
+
+  transition:.25s;
+
+}
+
+.scrapbook-link:hover{
+
+  background:rgba(255,255,255,.12);
+
+}
+
+/* ---------------- PAGE ---------------- */
+
+.paper-stage{
+
+  width:min(1040px,92vw);
+
+  margin:22px auto 40px;
+
+  padding:26px;
+
+  border-radius:8px;
+
+  background-image:
+  linear-gradient(
+  rgba(255,246,226,.74),
+  rgba(255,246,226,.74)
+  ),
+  url("/images/page/pages.png");
+
+  background-size:cover;
+
+  background-position:center;
+
+  border:1px solid rgba(99,70,45,.22);
+
+  box-shadow:
+
+  0 22px 60px rgba(54,33,22,.22),
+
+  inset 0 0 28px rgba(93,61,35,.12);
+
+}
+
+/* ---------------- HEADER ---------------- */
+
+.page-head{
+
+  display:grid;
+
+  grid-template-columns:minmax(0,1fr) auto;
+
+  align-items:end;
+
+  gap:18px;
+
+  margin-bottom:24px;
+
+  padding-bottom:18px;
+
+  border-bottom:1px solid rgba(87,58,35,.16);
+
+}
+
+.page-kicker{
+
+  color:#8a5c43;
+
+  text-transform:uppercase;
+
+  letter-spacing:.08em;
+
+  font-size:12px;
+
+  margin-bottom:6px;
+
+}
+
+.page-title{
+
+  font-size:clamp(30px,4vw,46px);
+
+  color:#3d2a22;
+
+  font-weight:500;
+
+  line-height:1.12;
+
+}
+
+.page-subtitle{
+
+  margin-top:10px;
+
+  max-width:650px;
+
+  color:#684c3b;
+
+  font-size:15px;
+
+  line-height:1.65;
+
+}
+
+/* ---------------- BUTTON ---------------- */
+
+.notebook-button{
+
+  display:inline-flex;
+
+  justify-content:center;
+
+  align-items:center;
+
+  min-height:38px;
+
+  padding:9px 18px;
+
+  border:none;
+
+  border-radius:999px;
+
+  background:#5d392e;
+
+  color:#fff8ea;
+
+  font-family:inherit;
+
+  font-size:14px;
+
+  cursor:pointer;
+
+  transition:.25s;
+
+}
+
+.notebook-button:hover{
+
+  transform:translateY(-2px);
+
+  box-shadow:0 8px 20px rgba(0,0,0,.15);
+
+}
+
+.notebook-button.secondary{
+
+  background:#f8efe1;
+
+  color:#503427;
+
+}
+
+/* ---------------- FORM ---------------- */
+
+.field-grid{
+
+  display:grid;
+
+  grid-template-columns:repeat(4,minmax(0,1fr));
+
+  gap:10px;
+
+  margin-top:12px;
+
+}
+
+.paper-field,
+.paper-select,
+.paper-textarea{
+
+  width:100%;
+
+  min-height:40px;
+
+  padding:9px 12px;
+
+  border-radius:6px;
+
+  border:1px solid rgba(96,64,42,.22);
+
+  background:rgba(255,252,242,.76);
+
+  color:#392820;
+
+  font:14px Georgia,"Times New Roman",serif;
+
+}
+
+.paper-field:focus,
+.paper-select:focus,
+.paper-textarea:focus{
+
+  outline:none;
+
+  border-color:#8c5b44;
+
+}
+
+.paper-textarea{
+
+  min-height:82px;
+
+  resize:vertical;
+
+  line-height:1.6;
+
+}
+/* ---------------- UPLOAD BOX ---------------- */
+
+.upload-group{
+
+  display:grid;
+
+  grid-template-columns:repeat(2,minmax(0,1fr));
+
+  gap:12px;
+
+  margin-top:14px;
+
+}
+
+.upload-box{
+
+  min-height:72px;
+
+  display:flex;
+
+  justify-content:center;
+
+  align-items:center;
+
+  border:2px dashed rgba(108,74,48,.25);
+
+  border-radius:8px;
+
+  background:rgba(255,251,242,.72);
+
+  color:#5b3d30;
+
+  cursor:pointer;
+
+  transition:.25s;
+
+  font-size:15px;
+
+  font-weight:600;
+
+}
+
+.upload-box:hover{
+
+  border-color:#8c5b44;
+
+  background:rgba(255,248,236,.95);
+
+  transform:translateY(-2px);
+
+}
+
+.upload-box input{
+
+  display:none;
+
+}
+
+/* ---------------- SCRAP GRID ---------------- */
+
+.scrap-grid{
+
+  display:grid;
+
+  grid-template-columns:repeat(3,minmax(0,1fr));
+
+  gap:18px;
+
+  margin-top:24px;
+
+}
+
+/* ---------------- CARD ---------------- */
+
+.scrap-card{
+
+  position:relative;
+
+  padding:16px;
+
+  border-radius:8px;
+
+  border:1px solid rgba(85,57,38,.18);
+
+  background:rgba(255,250,239,.74);
+
+  box-shadow:
+
+  0 10px 22px rgba(64,38,24,.08);
+
+  transition:.25s;
+
+}
+
+.scrap-card:hover{
+
+  transform:translateY(-3px);
+
+  box-shadow:
+
+  0 18px 32px rgba(64,38,24,.14);
+
+}
+
+.scrap-card h2{
+
+  color:#3e2a22;
+
+  font-size:24px;
+
+  font-weight:500;
+
+}
+
+.scrap-card h3{
+
+  color:#3e2a22;
+
+  font-size:20px;
+
+}
+
+.scrap-card p{
+
+  margin-top:8px;
+
+  color:#674c3d;
+
+  line-height:1.65;
+
+  font-size:15px;
+
+}
+
+/* ---------------- TAGS ---------------- */
+
+.tag-row{
+
+  display:flex;
+
+  flex-wrap:wrap;
+
+  gap:7px;
+
+  margin:12px 0;
+
+}
+
+.tag{
+
+  display:inline-flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  min-height:28px;
+
+  padding:5px 10px;
+
+  border:none;
+
+  border-radius:999px;
+
+  background:rgba(126,84,58,.12);
+
+  color:#654331;
+
+  font-size:12px;
+
+  cursor:pointer;
+
+  transition:.2s;
+
+}
+
+.tag:hover{
+
+  background:#8c5b44;
+
+  color:white;
+
+}
+
+/* ---------------- META ---------------- */
+
+.meta-list{
+
+  display:grid;
+
+  grid-template-columns:repeat(2,minmax(0,1fr));
+
+  gap:10px;
+
+  margin:16px 0;
+
+  font-size:14px;
+
+}
+
+.meta-list span{
+
+  display:block;
+
+  margin-bottom:4px;
+
+  color:#8b654c;
+
+  font-weight:600;
+
+}
+
+/* ---------------- PROGRESS ---------------- */
+
+.progress-track{
+
+  height:10px;
+
+  margin-top:18px;
+
+  border-radius:999px;
+
+  overflow:hidden;
+
+  background:rgba(94,63,42,.16);
+
+}
+
+.progress-fill{
+
+  height:100%;
+
+  border-radius:999px;
+
+  background:
+
+  linear-gradient(
+
+  90deg,
+
+  #8c5b44,
+
+  #c79a64
+
+  );
+
+}
+
+/* ---------------- AI ---------------- */
+
+.ai-panel{
+
+  margin-top:18px;
+
+  padding-top:14px;
+
+  border-top:1px dashed rgba(93,62,39,.25);
+
+}
+
+.ai-panel summary{
+
+  cursor:pointer;
+
+  color:#58392e;
+
+  font-weight:600;
+
+  font-size:15px;
+
+}
+
+.ai-panel summary:hover{
+
+  color:#8c5b44;
+
+}
+
+.ai-panel ul{
+
+  margin-top:12px;
+
+  margin-left:18px;
+
+  line-height:1.7;
+
+  color:#5f4538;
+
+}
+
+.ai-panel li{
+
+  margin-bottom:6px;
+
+}
+/* ---------------- VIEW TABS ---------------- */
+
+.view-tabs{
+
+  display:flex;
+
+  flex-wrap:wrap;
+
+  gap:10px;
+
+  margin:16px 0 24px;
+
+}
+
+.view-tabs button{
+
+  min-height:36px;
+
+  padding:8px 14px;
+
+  border:none;
+
+  border-radius:999px;
+
+  background:rgba(255,250,239,.72);
+
+  color:#52372c;
+
+  cursor:pointer;
+
+  font-family:inherit;
+
+  transition:.25s;
+
+}
+
+.view-tabs button:hover{
+
+  background:#8c5b44;
+
+  color:#fff;
+
+}
+
+.view-tabs button.active{
+
+  background:#5d392e;
+
+  color:#fff8ea;
+
+}
+
+/* ---------------- MEMORY IMAGE ---------------- */
+
+.memory-cover{
+
+  width:100%;
+
+  height:190px;
+
+  object-fit:cover;
+
+  border-radius:8px;
+
+  margin-bottom:14px;
+
+  background:#f6efe4;
+
+}
+
+.memory-gallery{
+
+  display:grid;
+
+  grid-template-columns:repeat(3,1fr);
+
+  gap:8px;
+
+  margin-top:14px;
+
+}
+
+.memory-gallery img{
+
+  width:100%;
+
+  aspect-ratio:1;
+
+  object-fit:cover;
+
+  border-radius:6px;
+
+  transition:.25s;
+
+  cursor:pointer;
+
+}
+
+.memory-gallery img:hover{
+
+  transform:scale(1.03);
+
+}
+
+/* ---------------- SMALL INFO ---------------- */
+
+.small-text{
+
+  font-size:13px;
+
+  color:#846555;
+
+}
+
+.divider{
+
+  width:100%;
+
+  height:1px;
+
+  background:rgba(90,60,35,.15);
+
+  margin:18px 0;
+
+}
+
+/* ---------------- EMPTY STATE ---------------- */
+
+.empty-state{
+
+  padding:60px 20px;
+
+  text-align:center;
+
+  color:#6b5143;
+
+}
+
+.empty-state h2{
+
+  font-size:28px;
+
+  margin-bottom:10px;
+
+}
+
+.empty-state p{
+
+  max-width:500px;
+
+  margin:auto;
+
+  line-height:1.7;
+
+}
+
+/* ---------------- SCROLLBAR ---------------- */
+
+::-webkit-scrollbar{
+
+  width:10px;
+
+}
+
+::-webkit-scrollbar-track{
+
+  background:#d9c4ac;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+  background:#8c5b44;
+
+  border-radius:999px;
+
+}
+
+::-webkit-scrollbar-thumb:hover{
+
+  background:#6c4433;
+
+}
+
+/* ---------------- RESPONSIVE ---------------- */
+
+@media (max-width:1100px){
+
+.paper-stage{
+
+width:94vw;
+
+padding:22px;
+
+}
+
+.scrap-grid{
+
+grid-template-columns:repeat(2,1fr);
+
+}
+
+}
+
+@media (max-width:850px){
+
+.scrapbook-nav{
+
+flex-direction:column;
+
+align-items:flex-start;
+
+}
+
+.scrapbook-links{
+
+width:100%;
+
+justify-content:flex-start;
+
+}
+
+.page-head{
+
+grid-template-columns:1fr;
+
+}
+
+.field-grid{
+
+grid-template-columns:1fr;
+
+}
+
+.scrap-grid{
+
+grid-template-columns:1fr;
+
+}
+
+.meta-list{
+
+grid-template-columns:1fr;
+
+}
+
+.upload-group{
+
+grid-template-columns:1fr;
+
+}
+
+.memory-gallery{
+
+grid-template-columns:repeat(2,1fr);
+
+}
+
+.page-title{
+
+font-size:34px;
+
+}
+
+}
+
+@media (max-width:600px){
+
+.paper-stage{
+
+padding:18px;
+
+margin:14px auto;
+
+}
+
+.page-title{
+
+font-size:28px;
+
+}
+
+.page-subtitle{
+
+font-size:14px;
+
+}
+
+.scrap-card{
+
+padding:14px;
+
+}
+
+.notebook-button{
+
+width:100%;
+
+}
+
+.memory-gallery{
+
+grid-template-columns:1fr;
+
+}
+
+}
+.active-link{
+
+background:#fff8ea;
+
+color:#5d392e;
+
+font-weight:600;
+
+}

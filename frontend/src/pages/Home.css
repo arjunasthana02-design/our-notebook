@@ -1,0 +1,81 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+.home{
+    width:100vw;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#efe5d8;
+    overflow:hidden;
+}
+
+.homeWrapper{
+    position:relative;
+    width:900px;
+    max-width:95vw;
+}
+
+.homeImage{
+    width:100%;
+    display:block;
+    user-select:none;
+}
+
+/* Welcome Letter */
+
+.welcomeArea{
+
+    position:absolute;
+
+    left:20%;
+
+    top:43%;
+
+    width:20%;
+
+    height:41%;
+
+    cursor:pointer;
+
+}
+
+/* Bucket List */
+
+.bucketArea{
+
+    position:absolute;
+
+    left:42%;
+
+    top:39%;
+
+    width:16%;
+
+    height:43%;
+
+    cursor:pointer;
+
+}
+
+/* Memories */
+
+.memoryArea{
+
+    position:absolute;
+
+    right:8%;
+
+    top:47%;
+
+    width:23%;
+
+    height:31%;
+
+    cursor:pointer;
+
+}
