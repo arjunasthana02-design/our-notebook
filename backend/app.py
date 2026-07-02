@@ -1,5 +1,7 @@
 import os
 import uuid
+from urllib.parse import unquote, urlparse
+
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -14,20 +16,151 @@ app = Flask(__name__)
 
 CORS(
     app,
-    resources={r"/*": {"origins": "*"}}
+    resources={r"/*": {"origins": "*"}},
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"]
 )
+
+
+@app.before_request
+def handle_preflight():
+
+    if request.method == "OPTIONS":
+        return "", 204
 
 # ==========================================
 # MYSQL CONFIG
 # ==========================================
 
-app.config["MYSQL_HOST"] = "localhost"
-app.config["MYSQL_HOST"] = os.getenv("MYSQL_HOST", "localhost")
-app.config["MYSQL_USER"] = os.getenv("MYSQL_USER", "root")
-app.config["MYSQL_PASSWORD"] = os.getenv("MYSQL_PASSWORD", "Arjun@0901")
-app.config["MYSQL_DB"] = os.getenv("MYSQL_DB", "notebook")
+def first_env(*names, default=None):
+
+    for name in names:
+
+        value = os.getenv(name)
+
+        if value not in (None, ""):
+            return value.strip()
+
+    return default
+
+
+def mysql_config_from_env():
+
+    database_url = first_env(
+        "MYSQL_URL",
+        "MYSQL_PUBLIC_URL",
+        "DATABASE_URL"
+    )
+
+    config = {}
+
+    if database_url:
+
+        parsed_url = urlparse(database_url)
+
+        if parsed_url.scheme.startswith("mysql"):
+
+            config.update({
+                "MYSQL_HOST": parsed_url.hostname,
+                "MYSQL_USER": unquote(parsed_url.username or ""),
+                "MYSQL_PASSWORD": unquote(parsed_url.password or ""),
+                "MYSQL_DB": unquote(parsed_url.path.lstrip("/")),
+                "MYSQL_PORT": parsed_url.port or 3306
+            })
+
+            return config
+
+    config.update({
+        "MYSQL_HOST": first_env(
+            "MYSQLHOST",
+            "MYSQL_HOST",
+            "DB_HOST",
+            "DATABASE_HOST"
+        ),
+        "MYSQL_USER": first_env(
+            "MYSQLUSER",
+            "MYSQL_USER",
+            "DB_USER",
+            "DATABASE_USER"
+        ),
+        "MYSQL_PASSWORD": first_env(
+            "MYSQLPASSWORD",
+            "MYSQL_PASSWORD",
+            "DB_PASSWORD",
+            "DATABASE_PASSWORD"
+        ),
+        "MYSQL_DB": first_env(
+            "MYSQLDATABASE",
+            "MYSQL_DATABASE",
+            "MYSQL_DB",
+            "DB_NAME",
+            "DATABASE_NAME"
+        ),
+        "MYSQL_PORT": int(first_env(
+            "MYSQLPORT",
+            "MYSQL_PORT",
+            "DB_PORT",
+            "DATABASE_PORT",
+            default="3306"
+        ))
+    })
+
+    if not config["MYSQL_HOST"] and os.getenv("RENDER") != "true":
+
+        config.update({
+            "MYSQL_HOST": "localhost",
+            "MYSQL_USER": "root",
+            "MYSQL_PASSWORD": "Arjun@0901",
+            "MYSQL_DB": "notebook",
+            "MYSQL_PORT": 3306
+        })
+
+    return config
+
+
+app.config.update(mysql_config_from_env())
 
 mysql = MySQL(app)
+
+
+def mysql_config_status():
+
+    required_keys = [
+        "MYSQL_HOST",
+        "MYSQL_USER",
+        "MYSQL_PASSWORD",
+        "MYSQL_DB",
+        "MYSQL_PORT"
+    ]
+
+    return {
+        "host": app.config.get("MYSQL_HOST"),
+        "user": app.config.get("MYSQL_USER"),
+        "database": app.config.get("MYSQL_DB"),
+        "port": app.config.get("MYSQL_PORT"),
+        "password_set": bool(app.config.get("MYSQL_PASSWORD")),
+        "missing": [
+            key
+            for key in required_keys
+            if app.config.get(key) in (None, "")
+        ],
+        "env_present": {
+            "MYSQLHOST": bool(os.getenv("MYSQLHOST")),
+            "MYSQL_HOST": bool(os.getenv("MYSQL_HOST")),
+            "MYSQLUSER": bool(os.getenv("MYSQLUSER")),
+            "MYSQL_USER": bool(os.getenv("MYSQL_USER")),
+            "MYSQLPASSWORD": bool(os.getenv("MYSQLPASSWORD")),
+            "MYSQL_PASSWORD": bool(os.getenv("MYSQL_PASSWORD")),
+            "MYSQLDATABASE": bool(os.getenv("MYSQLDATABASE")),
+            "MYSQL_DATABASE": bool(os.getenv("MYSQL_DATABASE")),
+            "MYSQL_DB": bool(os.getenv("MYSQL_DB")),
+            "MYSQLPORT": bool(os.getenv("MYSQLPORT")),
+            "MYSQL_PORT": bool(os.getenv("MYSQL_PORT")),
+            "MYSQL_URL": bool(os.getenv("MYSQL_URL")),
+            "MYSQL_PUBLIC_URL": bool(os.getenv("MYSQL_PUBLIC_URL")),
+            "DATABASE_URL": bool(os.getenv("DATABASE_URL"))
+        }
+    }
 
 # ==========================================
 # UPLOAD FOLDERS
@@ -63,7 +196,10 @@ def home():
 @app.route("/login", methods=["POST", "OPTIONS"])
 def login():
 
-    data = request.get_json()
+    if request.method == "OPTIONS":
+        return "", 204
+
+    data = request.get_json(silent=True) or {}
 
     password = data.get("password")
 
@@ -85,6 +221,16 @@ def test_db():
 
     try:
 
+        config_status = mysql_config_status()
+
+        if config_status["missing"]:
+
+            return jsonify({
+                "connected": False,
+                "error": "Missing MySQL configuration",
+                "mysql_config": config_status
+            }), 500
+
         cur = mysql.connection.cursor()
 
         cur.execute("SELECT DATABASE();")
@@ -95,14 +241,16 @@ def test_db():
 
         return jsonify({
             "connected": True,
-            "database": db[0]
+            "database": db[0],
+            "mysql_config": config_status
         })
 
     except Exception as e:
 
         return jsonify({
             "connected": False,
-            "error": str(e)
+            "error": str(e),
+            "mysql_config": mysql_config_status()
         })
 
 # ==========================================
