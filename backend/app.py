@@ -10,6 +10,15 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+
+    return jsonify({
+        "success": False,
+        "error": str(error)
+    }), 500
+
 # ==========================================
 # CORS
 # ==========================================
