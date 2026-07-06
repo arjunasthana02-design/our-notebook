@@ -1,0 +1,215 @@
+.wall-grid {
+  column-count: 3;
+  column-gap: 18px;
+  margin-bottom: 28px;
+}
+
+.wall-piece {
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 18px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 252, 242, 0.86);
+  box-shadow: 0 12px 24px rgba(64, 38, 24, 0.13);
+  transform: rotate(-0.5deg);
+}
+
+.wall-piece:nth-child(2n) {
+  transform: rotate(0.7deg);
+}
+
+.wall-piece img,
+.wall-piece video {
+  width: 100%;
+  display: block;
+  border-radius: 6px;
+}
+
+.wall-piece p {
+  margin-top: 9px;
+  color: #654331;
+  font-size: 14px;
+}
+
+.upload-memory-list {
+  display: grid;
+  gap: 10px;
+}
+
+.upload-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px dashed rgba(96, 64, 42, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 250, 239, 0.72);
+  color: #52372c;
+  cursor: pointer;
+}
+
+.secret-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.secret-card {
+  min-height: 300px;
+  padding: 18px;
+  border-radius: 8px;
+  background: rgba(255, 252, 242, 0.84);
+  box-shadow: 0 16px 30px rgba(64, 38, 24, 0.12);
+  transition: transform 0.35s ease;
+}
+
+.secret-card.open {
+  animation: letterOpen 0.55s ease both;
+}
+
+.secret-card h2 {
+  color: #3e2a22;
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+
+.locked-card {
+  display: grid;
+  place-items: center;
+  min-height: 110px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px dashed rgba(96, 64, 42, 0.28);
+  background: rgba(239, 226, 213, 0.72);
+  color: #654331;
+}
+
+.secret-card .notebook-button {
+  margin-top: 12px;
+}
+
+.secret-message {
+  margin-top: 12px;
+  color: #8a3a2b;
+  font-weight: 600;
+}
+
+.secret-letter {
+  padding: 18px;
+  border-radius: 8px;
+  background: linear-gradient(#fffaf0, #f7ead7);
+  box-shadow: inset 0 0 18px rgba(93, 61, 35, 0.1);
+  line-height: 1.8;
+  color: #54382b;
+}
+
+.birthday-page {
+  min-height: calc(100vh - 72px);
+  display: grid;
+  place-items: center;
+  padding: 36px 18px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 210, 220, 0.5), transparent 26%),
+    radial-gradient(circle at 80% 18%, rgba(255, 238, 176, 0.5), transparent 24%);
+}
+
+.birthday-paper {
+  width: min(760px, 92vw);
+  padding: clamp(28px, 5vw, 54px);
+  border-radius: 8px;
+  text-align: center;
+  background: rgba(255, 250, 239, 0.88);
+  border: 1px solid rgba(130, 76, 72, 0.18);
+  box-shadow: 0 24px 60px rgba(86, 42, 50, 0.18);
+}
+
+.birthday-paper h1 {
+  font-size: clamp(34px, 6vw, 58px);
+  color: #62332f;
+  font-weight: 500;
+}
+
+.birthday-date {
+  margin-top: 8px;
+  color: #8b514b;
+  font-size: 22px;
+}
+
+.countdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 34px 0 22px;
+}
+
+.countdown-tile {
+  padding: 18px 10px;
+  border-radius: 8px;
+  background: #fff4df;
+  box-shadow: inset 0 0 0 1px rgba(98, 51, 47, 0.12);
+}
+
+.countdown-tile strong {
+  display: block;
+  color: #5d392e;
+  font-size: 34px;
+}
+
+.countdown-tile span {
+  color: #8b654c;
+  text-transform: capitalize;
+}
+
+.birthday-months {
+  color: #654331;
+  font-size: 18px;
+}
+
+.playlist-frame {
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 18px 34px rgba(64, 38, 24, 0.13);
+}
+
+.playlist-frame iframe {
+  display: block;
+  border: 0;
+}
+
+@keyframes letterOpen {
+  from {
+    opacity: 0.4;
+    transform: rotateX(16deg) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: rotateX(0) translateY(0);
+  }
+}
+
+@media (max-width: 850px) {
+  .wall-grid {
+    column-count: 2;
+  }
+
+  .secret-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .countdown-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .wall-grid {
+    column-count: 1;
+  }
+
+  .upload-strip {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

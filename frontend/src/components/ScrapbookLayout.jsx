@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import "../styles/scrapbook.css";
 
 export default function ScrapbookLayout({
@@ -6,6 +7,14 @@ export default function ScrapbookLayout({
   label = "Bhoomi & Arjun's Notebook",
 }) {
   const location = useLocation();
+  const [darkMode, setDarkMode] = useState(
+    () => localStorage.getItem("notebook-theme") === "dark"
+  );
+
+  useEffect(() => {
+    document.body.classList.toggle("notebook-dark", darkMode);
+    localStorage.setItem("notebook-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   return (
     <main className="scrapbook-shell">
@@ -49,6 +58,51 @@ export default function ScrapbookLayout({
           </Link>
 
           <Link
+            to="/timeline"
+            className={`scrapbook-link ${
+              location.pathname === "/timeline" ? "active-link" : ""
+            }`}
+          >
+            Timeline
+          </Link>
+
+          <Link
+            to="/photo-wall"
+            className={`scrapbook-link ${
+              location.pathname === "/photo-wall" ? "active-link" : ""
+            }`}
+          >
+            Photo Wall
+          </Link>
+
+          <Link
+            to="/open-when"
+            className={`scrapbook-link ${
+              location.pathname === "/open-when" ? "active-link" : ""
+            }`}
+          >
+            Open When...
+          </Link>
+
+          <Link
+            to="/birthday"
+            className={`scrapbook-link ${
+              location.pathname === "/birthday" ? "active-link" : ""
+            }`}
+          >
+            Birthday
+          </Link>
+
+          <Link
+            to="/playlist"
+            className={`scrapbook-link ${
+              location.pathname === "/playlist" ? "active-link" : ""
+            }`}
+          >
+            Our Playlist
+          </Link>
+
+          <Link
             to="/chapters"
             className={`scrapbook-link ${
               location.pathname === "/chapters" ? "active-link" : ""
@@ -65,6 +119,14 @@ export default function ScrapbookLayout({
           >
             Settings
           </Link>
+
+          <button
+            className="theme-switch"
+            type="button"
+            onClick={() => setDarkMode((value) => !value)}
+          >
+            {darkMode ? "Dark" : "Light"}
+          </button>
 
         </div>
 

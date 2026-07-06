@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import date, datetime
 from urllib.parse import unquote, urlparse
 
 
@@ -194,7 +195,46 @@ SCHEMA_STATEMENTS = [
         video_path TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
+    """,
     """
+    CREATE TABLE IF NOT EXISTS timeline
+    (
+        timeline_id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        subtitle TEXT,
+        chapter_order INT NOT NULL,
+        is_loading BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS secrets
+    (
+        secret_id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        letter TEXT NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        unlock_date DATE NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """
+]
+
+DEFAULT_TIMELINE = [
+    ("First Time Seeing", "The first page where everything quietly began.", 1, False),
+    ("First Conversation", "A small hello that became part of our story.", 2, False),
+    ("First Rejection", "Even the almosts deserve a page.", 3, False),
+    ("First Meeting", "The day distance turned into a real moment.", 4, False),
+    ("Loading...", "Some chapters are still waiting to happen.", 5, True),
+]
+
+DEFAULT_SECRETS = [
+    (
+        "Open when the time is right",
+        "Write this one yourself when the moment finally makes sense.",
+        "us260626",
+        None,
+    ),
 ]
 
 
@@ -210,9 +250,68 @@ def ensure_database_schema():
     for statement in SCHEMA_STATEMENTS:
         cur.execute(statement)
 
+    ensure_column(cur, "timeline", "subtitle", "TEXT")
+    ensure_column(cur, "timeline", "chapter_order", "INT NOT NULL DEFAULT 1")
+    ensure_column(cur, "timeline", "is_loading", "BOOLEAN DEFAULT FALSE")
+    ensure_column(cur, "secrets", "unlock_date", "DATE NULL")
+
+    cur.execute("SELECT COUNT(*) FROM timeline")
+    if cur.fetchone()[0] == 0:
+        cur.executemany(
+            """
+            INSERT INTO timeline (title, subtitle, chapter_order, is_loading)
+            VALUES (%s,%s,%s,%s)
+            """,
+            DEFAULT_TIMELINE
+        )
+    else:
+        cur.execute("""
+            UPDATE timeline
+            SET is_loading=TRUE, title='Loading...'
+            WHERE title='Loading...'
+        """)
+        cur.execute("SELECT COUNT(*) FROM timeline WHERE is_loading=TRUE")
+        if cur.fetchone()[0] == 0:
+            cur.execute("""
+                INSERT INTO timeline (title, subtitle, chapter_order, is_loading)
+                VALUES ('Loading...', 'Some chapters are still waiting to happen.', 9999, TRUE)
+            """)
+
+    cur.execute("""
+        SELECT COALESCE(MAX(chapter_order), 0)
+        FROM timeline
+        WHERE is_loading=FALSE
+    """)
+    last_timeline_order = cur.fetchone()[0] or 0
+    cur.execute("""
+        UPDATE timeline
+        SET chapter_order=%s
+        WHERE is_loading=TRUE
+    """, (last_timeline_order + 1,))
+
+    cur.execute("SELECT COUNT(*) FROM secrets")
+    if cur.fetchone()[0] == 0:
+        cur.executemany(
+            """
+            INSERT INTO secrets (title, letter, password, unlock_date)
+            VALUES (%s,%s,%s,%s)
+            """,
+            DEFAULT_SECRETS
+        )
+
     mysql.connection.commit()
     cur.close()
     schema_ready = True
+
+
+def ensure_column(cur, table_name, column_name, column_definition):
+
+    cur.execute(f"SHOW COLUMNS FROM {table_name} LIKE %s", (column_name,))
+
+    if cur.fetchone():
+        return
+
+    cur.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}")
 
 
 def db_cursor():
@@ -266,9 +365,12 @@ def mysql_config_status():
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", os.path.join(BASE_DIR, "uploads"))
+PROJECT_UPLOAD_FOLDER = os.path.abspath(os.path.join(BASE_DIR, "..", "uploads"))
 
 PHOTO_FOLDER = os.path.join(UPLOAD_FOLDER, "photos")
 VIDEO_FOLDER = os.path.join(UPLOAD_FOLDER, "videos")
+PROJECT_PHOTO_FOLDER = os.path.join(PROJECT_UPLOAD_FOLDER, "photos")
+PROJECT_VIDEO_FOLDER = os.path.join(PROJECT_UPLOAD_FOLDER, "videos")
 
 os.makedirs(PHOTO_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
@@ -359,14 +461,26 @@ def test_db():
 def uploaded_file(folder, filename):
 
     if folder == "photos":
+        if os.path.exists(os.path.join(app.config["PHOTO_FOLDER"], filename)):
+            return send_from_directory(
+                app.config["PHOTO_FOLDER"],
+                filename
+            )
+
         return send_from_directory(
-            app.config["PHOTO_FOLDER"],
+            PROJECT_PHOTO_FOLDER,
             filename
         )
 
     if folder == "videos":
+        if os.path.exists(os.path.join(app.config["VIDEO_FOLDER"], filename)):
+            return send_from_directory(
+                app.config["VIDEO_FOLDER"],
+                filename
+            )
+
         return send_from_directory(
-            app.config["VIDEO_FOLDER"],
+            PROJECT_VIDEO_FOLDER,
             filename
         )
 
@@ -1022,10 +1136,263 @@ def delete_chapter(id):
     })
 
 
+@app.route("/timeline", methods=["GET"])
+def get_timeline():
+
+    cur = db_cursor()
+
+    cur.execute("""
+        SELECT
+            timeline_id,
+            title,
+            subtitle,
+            chapter_order,
+            is_loading
+        FROM timeline
+        ORDER BY is_loading ASC, chapter_order ASC, timeline_id ASC
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+
+    timeline = []
+
+    for row in rows:
+
+        timeline.append({
+
+            "id": row[0],
+            "title": row[1],
+            "subtitle": row[2],
+            "chapter_order": row[3],
+            "is_loading": bool(row[4])
+
+        })
+
+    return jsonify(timeline)
+
+
+def keep_loading_chapter_last():
+
+    cur = db_cursor()
+
+    cur.execute("""
+        SELECT COALESCE(MAX(chapter_order), 0)
+        FROM timeline
+        WHERE is_loading=FALSE
+    """)
+
+    last_order = cur.fetchone()[0] or 0
+
+    cur.execute("""
+        UPDATE timeline
+        SET title='Loading...', chapter_order=%s
+        WHERE is_loading=TRUE
+    """, (last_order + 1,))
+
+    mysql.connection.commit()
+    cur.close()
+
+
+@app.route("/timeline", methods=["POST"])
+def add_timeline_chapter():
+
+    data = request.get_json(silent=True) or {}
+    title = (data.get("title") or "").strip()
+    subtitle = (data.get("subtitle") or "").strip()
+    chapter_order = int(data.get("chapter_order") or 1)
+
+    if not title:
+        return jsonify({"success": False, "error": "Title is required"}), 400
+
+    cur = db_cursor()
+
+    cur.execute(
+        """
+        INSERT INTO timeline (title, subtitle, chapter_order, is_loading)
+        VALUES (%s,%s,%s,FALSE)
+        """,
+        (title, subtitle, chapter_order)
+    )
+
+    mysql.connection.commit()
+    chapter_id = cur.lastrowid
+    cur.close()
+
+    keep_loading_chapter_last()
+
+    return jsonify({"success": True, "id": chapter_id})
+
+
+@app.route("/timeline/<int:id>", methods=["PUT"])
+def update_timeline_chapter(id):
+
+    data = request.get_json(silent=True) or {}
+    title = (data.get("title") or "").strip()
+    subtitle = (data.get("subtitle") or "").strip()
+    chapter_order = int(data.get("chapter_order") or 1)
+
+    if not title:
+        return jsonify({"success": False, "error": "Title is required"}), 400
+
+    cur = db_cursor()
+
+    cur.execute("SELECT is_loading FROM timeline WHERE timeline_id=%s", (id,))
+    row = cur.fetchone()
+
+    if not row:
+        cur.close()
+        return jsonify({"success": False, "error": "Chapter not found"}), 404
+
+    if bool(row[0]):
+        cur.close()
+        return jsonify({"success": False, "error": "Loading chapter cannot be edited"}), 400
+
+    cur.execute(
+        """
+        UPDATE timeline
+        SET title=%s, subtitle=%s, chapter_order=%s
+        WHERE timeline_id=%s
+        """,
+        (title, subtitle, chapter_order, id)
+    )
+
+    mysql.connection.commit()
+    cur.close()
+
+    keep_loading_chapter_last()
+
+    return jsonify({"success": True})
+
+
+@app.route("/timeline/<int:id>", methods=["DELETE"])
+def delete_timeline_chapter(id):
+
+    cur = db_cursor()
+
+    cur.execute("SELECT is_loading FROM timeline WHERE timeline_id=%s", (id,))
+    row = cur.fetchone()
+
+    if not row:
+        cur.close()
+        return jsonify({"success": False, "error": "Chapter not found"}), 404
+
+    if bool(row[0]):
+        cur.close()
+        return jsonify({"success": False, "error": "Loading chapter cannot be deleted"}), 400
+
+    cur.execute("DELETE FROM timeline WHERE timeline_id=%s", (id,))
+    mysql.connection.commit()
+    cur.close()
+
+    keep_loading_chapter_last()
+
+    return jsonify({"success": True})
+
+
+@app.route("/photo-wall", methods=["GET"])
+def get_photo_wall():
+
+    cur = db_cursor()
+    cur.execute(f"""
+        SELECT {CHAPTER_COLUMNS}
+        FROM chapters
+        ORDER BY chapter_id DESC
+    """)
+    rows = cur.fetchall()
+    cur.close()
+
+    media = get_media_for_chapters([row[0] for row in rows])
+    return jsonify([chapter_to_dict(row, media) for row in rows])
+
+
+@app.route("/secrets", methods=["GET"])
+def get_secrets():
+
+    cur = db_cursor()
+    cur.execute("""
+        SELECT MIN(secret_id), title, unlock_date
+        FROM secrets
+        GROUP BY title, unlock_date
+        ORDER BY MIN(secret_id) ASC
+    """)
+
+    rows = cur.fetchall()
+    cur.close()
+
+    return jsonify([
+        {
+            "id": row[0],
+            "title": row[1],
+            "unlock_date": str(row[2]) if row[2] else None,
+            "locked": True
+        }
+        for row in rows
+    ])
+
+
+@app.route("/secrets/all", methods=["GET"])
+def get_all_secrets():
+
+    cur = db_cursor()
+    cur.execute("""
+        SELECT secret_id, title, unlock_date
+        FROM secrets
+        ORDER BY secret_id ASC
+    """)
+    rows = cur.fetchall()
+    cur.close()
+
+    return jsonify([
+        {
+            "id": row[0],
+            "title": row[1],
+            "unlock_date": str(row[2]) if row[2] else None,
+            "locked": True
+        }
+        for row in rows
+    ])
+
+
+@app.route("/secrets/<int:id>/unlock", methods=["POST"])
+def unlock_secret(id):
+
+    data = request.get_json(silent=True) or {}
+    password = data.get("password") or ""
+
+    cur = db_cursor()
+    cur.execute(
+        """
+        SELECT title, letter, password, unlock_date
+        FROM secrets
+        WHERE secret_id=%s
+        """,
+        (id,)
+    )
+    row = cur.fetchone()
+    cur.close()
+
+    if not row:
+        return jsonify({"success": False, "message": "Not the right time."}), 404
+
+    unlock_date = row[3]
+    if isinstance(unlock_date, datetime):
+        unlock_date = unlock_date.date()
+
+    if password != row[2] or (unlock_date and date.today() < unlock_date):
+        return jsonify({"success": False, "message": "Not the right time."}), 403
+
+    return jsonify({
+        "success": True,
+        "title": row[0],
+        "letter": row[1]
+    })
+
+
 # ==========================================
 # RUN APP
 # ==========================================
-
 if __name__ == "__main__":
 
     app.run(
