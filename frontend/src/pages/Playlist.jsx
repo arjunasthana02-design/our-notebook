@@ -3,7 +3,7 @@ import "./NotebookExtras.css";
 
 const SPOTIFY_PLAYLIST_URL =
   import.meta.env.VITE_SPOTIFY_PLAYLIST_URL ||
-  "https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M";
+  "https://open.spotify.com/embed/playlist/37i9dQZF1EJxsR4OUAMJeg";
 
 export default function Playlist() {
   return (
@@ -13,7 +13,7 @@ export default function Playlist() {
           <div>
             <div className="page-kicker">Our Playlist</div>
             <h1 className="page-title">Songs tucked between pages.</h1>
-            <p className="page-subtitle">The playlist URL is configurable with VITE_SPOTIFY_PLAYLIST_URL.</p>
+            <p className="page-subtitle">A little corner for the songs that sound like us.</p>
           </div>
         </header>
 
