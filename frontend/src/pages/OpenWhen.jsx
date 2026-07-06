@@ -3,7 +3,7 @@ import ScrapbookLayout from "../components/ScrapbookLayout";
 import "./NotebookExtras.css";
 
 const STORAGE_KEY = "notebook-open-when-notes";
-const SECRET_PASSWORD = "us260626";
+const SECRET_PASSWORD = "260626";
 
 const DEFAULT_NOTES = [
   {
@@ -56,6 +56,7 @@ export default function OpenWhen() {
   const [password, setPassword] = useState("");
   const [secretOpen, setSecretOpen] = useState(false);
   const [secretMessage, setSecretMessage] = useState("");
+  const [activeNoteId, setActiveNoteId] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
@@ -65,6 +66,7 @@ export default function OpenWhen() {
     () => notes.filter((note) => !note.locked || secretOpen),
     [notes, secretOpen]
   );
+  const activeNote = notes.find((note) => note.id === activeNoteId);
 
   function updateNote(id, value) {
     setNotes((current) =>
@@ -80,6 +82,11 @@ export default function OpenWhen() {
     }
 
     setSecretMessage("Wrong password.");
+  }
+
+  function openLetter(note) {
+    if (note.locked && !secretOpen) return;
+    setActiveNoteId(note.id);
   }
 
   return (
@@ -98,11 +105,12 @@ export default function OpenWhen() {
         <div className="secret-grid">
           {notes.map((note) => (
             <article
-              className={`secret-card open-when-card ${
+              className={`secret-card open-when-card letter-envelope ${
                 note.locked && !secretOpen ? "is-locked" : "open"
               }`}
               key={note.id}
             >
+              <div className="envelope-flap" />
               <h2>{note.title}</h2>
               <p className="secret-prompt">{note.prompt}</p>
 
@@ -129,12 +137,17 @@ export default function OpenWhen() {
                   )}
                 </>
               ) : (
-                <textarea
-                  className="paper-textarea open-when-textarea"
-                  placeholder="Write here..."
-                  value={note.text}
-                  onChange={(event) => updateNote(note.id, event.target.value)}
-                />
+                <>
+                  <div className="letter-preview">
+                    <span>{note.text || "Your letter is waiting inside."}</span>
+                  </div>
+                  <button
+                    className="notebook-button letter-open-button"
+                    onClick={() => openLetter(note)}
+                  >
+                    Open Letter
+                  </button>
+                </>
               )}
             </article>
           ))}
@@ -142,6 +155,31 @@ export default function OpenWhen() {
 
         {unlockedNotes.length === notes.length && (
           <p className="open-when-save-note">Saved on this browser.</p>
+        )}
+
+        {activeNote && (!activeNote.locked || secretOpen) && (
+          <div className="letter-modal" role="dialog" aria-modal="true">
+            <div className="letter-page">
+              <button
+                className="letter-close"
+                type="button"
+                onClick={() => setActiveNoteId(null)}
+                aria-label="Close letter"
+              >
+                Close
+              </button>
+              <p className="page-kicker">A letter for you</p>
+              <h2>{activeNote.title}</h2>
+              <textarea
+                className="paper-textarea letter-page-text"
+                placeholder="Write your paragraph here..."
+                value={activeNote.text}
+                onChange={(event) => updateNote(activeNote.id, event.target.value)}
+                autoFocus
+              />
+              <p className="open-when-save-note">Saved on this browser.</p>
+            </div>
+          </div>
         )}
       </section>
     </ScrapbookLayout>

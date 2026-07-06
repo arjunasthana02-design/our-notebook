@@ -43,6 +43,24 @@ export default function Birthday() {
     <ScrapbookLayout>
       <section className="birthday-page">
         <div className="birthday-paper">
+          <div className="birthday-confetti" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="flower-corner flower-corner-left" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="flower-corner flower-corner-right" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
           <p className="page-kicker">Birthday</p>
           <h1>Bhoomi's Birthday</h1>
           <p className="birthday-date">9 March</p>

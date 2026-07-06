@@ -232,7 +232,7 @@ DEFAULT_SECRETS = [
     (
         "Open when the time is right",
         "Write this one yourself when the moment finally makes sense.",
-        "us260626",
+        "260626",
         None,
     ),
 ]
