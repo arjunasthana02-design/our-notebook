@@ -138,9 +138,6 @@ export default function OpenWhen() {
                 </>
               ) : (
                 <>
-                  <div className="letter-preview">
-                    <span>{note.text || "Your letter is waiting inside."}</span>
-                  </div>
                   <button
                     className="notebook-button letter-open-button"
                     onClick={() => openLetter(note)}

@@ -378,6 +378,36 @@ os.makedirs(VIDEO_FOLDER, exist_ok=True)
 app.config["PHOTO_FOLDER"] = PHOTO_FOLDER
 app.config["VIDEO_FOLDER"] = VIDEO_FOLDER
 
+
+def find_uploaded_filename(folder_paths, filename):
+
+    filename = secure_filename(filename)
+
+    for folder_path in folder_paths:
+
+        exact_path = os.path.join(folder_path, filename)
+
+        if os.path.exists(exact_path):
+            return folder_path, filename
+
+    suffix = f"_{filename}"
+
+    for folder_path in folder_paths:
+
+        if not os.path.isdir(folder_path):
+            continue
+
+        for existing_filename in os.listdir(folder_path):
+
+            if (
+                existing_filename == filename or
+                filename.endswith(f"_{existing_filename}") or
+                existing_filename.endswith(suffix)
+            ):
+                return folder_path, existing_filename
+
+    return None, None
+
 # ==========================================
 # HOME
 # ==========================================
@@ -461,28 +491,26 @@ def test_db():
 def uploaded_file(folder, filename):
 
     if folder == "photos":
-        if os.path.exists(os.path.join(app.config["PHOTO_FOLDER"], filename)):
-            return send_from_directory(
-                app.config["PHOTO_FOLDER"],
-                filename
-            )
-
-        return send_from_directory(
-            PROJECT_PHOTO_FOLDER,
+        folder_path, served_filename = find_uploaded_filename(
+            [app.config["PHOTO_FOLDER"], PROJECT_PHOTO_FOLDER],
             filename
         )
+
+        if not served_filename:
+            return "File not found", 404
+
+        return send_from_directory(folder_path, served_filename)
 
     if folder == "videos":
-        if os.path.exists(os.path.join(app.config["VIDEO_FOLDER"], filename)):
-            return send_from_directory(
-                app.config["VIDEO_FOLDER"],
-                filename
-            )
-
-        return send_from_directory(
-            PROJECT_VIDEO_FOLDER,
+        folder_path, served_filename = find_uploaded_filename(
+            [app.config["VIDEO_FOLDER"], PROJECT_VIDEO_FOLDER],
             filename
         )
+
+        if not served_filename:
+            return "File not found", 404
+
+        return send_from_directory(folder_path, served_filename)
 
     return "Folder not found", 404
 

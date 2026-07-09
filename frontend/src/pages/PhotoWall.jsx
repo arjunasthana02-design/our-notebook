@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import ScrapbookLayout from "../components/ScrapbookLayout";
-import { API_BASE_URL, apiUrl } from "../services/api";
+import { apiUrl, mediaUrl } from "../services/api";
 import "./NotebookExtras.css";
 
 export default function PhotoWall() {
@@ -16,10 +16,6 @@ export default function PhotoWall() {
     const response = await fetch(apiUrl("/photo-wall"));
     const data = await response.json();
     setMemories(Array.isArray(data) ? data : []);
-  }
-
-  function mediaUrl(path) {
-    return path?.startsWith("http") ? path : `${API_BASE_URL}${path}`;
   }
 
   async function uploadMedia(memoryId, files) {

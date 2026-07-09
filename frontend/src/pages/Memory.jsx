@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import ScrapbookLayout from "../components/ScrapbookLayout";
 import { useEffect, useState } from "react";
-import { API_BASE_URL, apiUrl } from "../services/api";
+import { apiUrl, mediaUrl } from "../services/api";
 
 export default function Memory() {
 
@@ -10,9 +10,6 @@ export default function Memory() {
   const [memory, setMemory] = useState(null);
 
   const [loading, setLoading] = useState(true);
-
-  const mediaUrl = (path) =>
-    path?.startsWith("http") ? path : `${API_BASE_URL}${path}`;
 
   useEffect(() => {
 

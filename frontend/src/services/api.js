@@ -7,3 +7,24 @@ export const API_BASE_URL =
 export function apiUrl(path) {
   return `${API_BASE_URL}${path}`;
 }
+
+export function mediaUrl(path) {
+  if (!path) return "";
+
+  const normalizedPath = String(path).replaceAll("\\", "/").trim();
+
+  if (
+    normalizedPath.startsWith("http://") ||
+    normalizedPath.startsWith("https://") ||
+    normalizedPath.startsWith("blob:") ||
+    normalizedPath.startsWith("data:")
+  ) {
+    return encodeURI(normalizedPath);
+  }
+
+  const pathWithSlash = normalizedPath.startsWith("/")
+    ? normalizedPath
+    : `/${normalizedPath}`;
+
+  return encodeURI(`${API_BASE_URL}${pathWithSlash}`);
+}
