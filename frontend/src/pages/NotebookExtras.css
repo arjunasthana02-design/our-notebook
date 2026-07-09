@@ -418,6 +418,19 @@
   line-height: 1.05;
 }
 
+.birthday-countdown-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.birthday-countdown-section h2 {
+  margin: 0;
+  color: #7a343f;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 500;
+}
+
 .countdown-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

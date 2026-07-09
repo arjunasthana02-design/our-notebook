@@ -217,6 +217,14 @@ SCHEMA_STATEMENTS = [
         unlock_date DATE NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS open_when_notes
+    (
+        note_id VARCHAR(100) PRIMARY KEY,
+        note_text TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
     """
 ]
 
@@ -1421,6 +1429,51 @@ def unlock_secret(id):
         "success": True,
         "title": row[0],
         "letter": row[1]
+    })
+
+
+@app.route("/open-when-notes", methods=["GET"])
+def get_open_when_notes():
+
+    cur = db_cursor()
+    cur.execute("""
+        SELECT note_id, note_text
+        FROM open_when_notes
+    """)
+    rows = cur.fetchall()
+    cur.close()
+
+    return jsonify([
+        {
+            "id": row[0],
+            "text": row[1] or ""
+        }
+        for row in rows
+    ])
+
+
+@app.route("/open-when-notes/<note_id>", methods=["PUT"])
+def save_open_when_note(note_id):
+
+    data = request.get_json(silent=True) or {}
+    note_text = data.get("text") or ""
+
+    cur = db_cursor()
+    cur.execute(
+        """
+        INSERT INTO open_when_notes (note_id, note_text)
+        VALUES (%s,%s)
+        ON DUPLICATE KEY UPDATE note_text=VALUES(note_text)
+        """,
+        (note_id, note_text)
+    )
+    mysql.connection.commit()
+    cur.close()
+
+    return jsonify({
+        "success": True,
+        "id": note_id,
+        "text": note_text
     })
 
 

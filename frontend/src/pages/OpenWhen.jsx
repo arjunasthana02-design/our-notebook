@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import ScrapbookLayout from "../components/ScrapbookLayout";
+import { apiUrl } from "../services/api";
 import "./NotebookExtras.css";
 
-const STORAGE_KEY = "notebook-open-when-notes";
+const LEGACY_STORAGE_KEY = "notebook-open-when-notes";
 const SECRET_PASSWORD = "260626";
 
 const DEFAULT_NOTES = [
@@ -39,28 +40,62 @@ const DEFAULT_NOTES = [
   }
 ];
 
-function loadNotes() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    return DEFAULT_NOTES.map((note) => ({
-      ...note,
-      ...(saved.find((item) => item.id === note.id) || {})
-    }));
-  } catch {
-    return DEFAULT_NOTES;
-  }
-}
-
 export default function OpenWhen() {
-  const [notes, setNotes] = useState(loadNotes);
+  const [notes, setNotes] = useState(DEFAULT_NOTES);
   const [password, setPassword] = useState("");
   const [secretOpen, setSecretOpen] = useState(false);
   const [secretMessage, setSecretMessage] = useState("");
   const [activeNoteId, setActiveNoteId] = useState(null);
+  const [saveMessage, setSaveMessage] = useState("Loading shared letters...");
+  const [notesLoaded, setNotesLoaded] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
-  }, [notes]);
+    let active = true;
+
+    async function loadNotes() {
+      try {
+        const response = await fetch(apiUrl("/open-when-notes"));
+        const saved = await response.json();
+
+        if (!active) return;
+
+        let legacySaved = [];
+        try {
+          legacySaved = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || "[]");
+        } catch {
+          legacySaved = [];
+        }
+
+        setNotes(
+          DEFAULT_NOTES.map((note) => {
+            const sharedNote = Array.isArray(saved)
+              ? saved.find((item) => item.id === note.id)
+              : null;
+            const legacyNote = Array.isArray(legacySaved)
+              ? legacySaved.find((item) => item.id === note.id)
+              : null;
+
+            return {
+              ...note,
+              ...(sharedNote || legacyNote || {})
+            };
+          })
+        );
+        setSaveMessage("Saved for both browsers.");
+        setNotesLoaded(true);
+      } catch {
+        if (active) {
+          setSaveMessage("Could not load shared letters.");
+        }
+      }
+    }
+
+    loadNotes();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const unlockedNotes = useMemo(
     () => notes.filter((note) => !note.locked || secretOpen),
@@ -72,7 +107,35 @@ export default function OpenWhen() {
     setNotes((current) =>
       current.map((note) => (note.id === id ? { ...note, text: value } : note))
     );
+    setSaveMessage("Saving...");
   }
+
+  useEffect(() => {
+    if (!notesLoaded) return;
+
+    const notesToSave = notes.map(({ id, text }) => ({ id, text }));
+
+    const timer = setTimeout(async () => {
+      try {
+        await Promise.all(
+          notesToSave.map((note) =>
+            fetch(apiUrl(`/open-when-notes/${note.id}`), {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ text: note.text })
+            })
+          )
+        );
+        setSaveMessage("Saved for both browsers.");
+      } catch {
+        setSaveMessage("Could not save to the website.");
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [notes, notesLoaded]);
 
   function unlockSecret() {
     if (password.trim() === SECRET_PASSWORD) {
@@ -151,7 +214,7 @@ export default function OpenWhen() {
         </div>
 
         {unlockedNotes.length === notes.length && (
-          <p className="open-when-save-note">Saved on this browser.</p>
+          <p className="open-when-save-note">{saveMessage}</p>
         )}
 
         {activeNote && (!activeNote.locked || secretOpen) && (
@@ -174,7 +237,7 @@ export default function OpenWhen() {
                 onChange={(event) => updateNote(activeNote.id, event.target.value)}
                 autoFocus
               />
-              <p className="open-when-save-note">Saved on this browser.</p>
+              <p className="open-when-save-note">{saveMessage}</p>
             </div>
           </div>
         )}
