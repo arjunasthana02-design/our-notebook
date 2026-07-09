@@ -5,22 +5,6 @@ const SPOTIFY_PLAYLIST_URL =
   import.meta.env.VITE_SPOTIFY_PLAYLIST_URL ||
   "https://open.spotify.com/playlist/37i9dQZF1EJxsR4OUAMJeg?si=4e9d701a48684c15";
 
-function spotifyEmbedUrl(url) {
-  const fallbackId = "37i9dQZF1EJxsR4OUAMJeg";
-
-  try {
-    const spotifyUrl = new URL(url);
-    const playlistMatch = spotifyUrl.pathname.match(/\/(?:embed\/)?playlist\/([^/]+)/);
-    const playlistId = playlistMatch?.[1] || fallbackId;
-
-    return `https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator`;
-  } catch {
-    return `https://open.spotify.com/embed/playlist/${fallbackId}?utm_source=generator`;
-  }
-}
-
-const SPOTIFY_EMBED_URL = spotifyEmbedUrl(SPOTIFY_PLAYLIST_URL);
-
 export default function Playlist() {
   return (
     <ScrapbookLayout>
@@ -34,14 +18,21 @@ export default function Playlist() {
         </header>
 
         <div className="playlist-frame">
-          <iframe
-            title="Our Spotify Playlist"
-            src={SPOTIFY_EMBED_URL}
-            width="100%"
-            height="520"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"
-          />
+          <div className="spotify-card">
+            <div className="spotify-mark">♪</div>
+            <div>
+              <h2>Our Spotify Playlist</h2>
+              <p>Open the playlist directly in Spotify.</p>
+            </div>
+            <a
+              className="notebook-button spotify-open-button"
+              href={SPOTIFY_PLAYLIST_URL}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open Playlist
+            </a>
+          </div>
         </div>
       </section>
     </ScrapbookLayout>
