@@ -383,6 +383,10 @@ def find_uploaded_filename(folder_paths, filename):
 
     filename = secure_filename(filename)
 
+    def original_upload_name(uploaded_filename):
+        parts = uploaded_filename.split("_", 1)
+        return parts[1] if len(parts) == 2 and "-" in parts[0] else uploaded_filename
+
     for folder_path in folder_paths:
 
         exact_path = os.path.join(folder_path, filename)
@@ -391,6 +395,7 @@ def find_uploaded_filename(folder_paths, filename):
             return folder_path, filename
 
     suffix = f"_{filename}"
+    original_filename = original_upload_name(filename)
 
     for folder_path in folder_paths:
 
@@ -402,7 +407,8 @@ def find_uploaded_filename(folder_paths, filename):
             if (
                 existing_filename == filename or
                 filename.endswith(f"_{existing_filename}") or
-                existing_filename.endswith(suffix)
+                existing_filename.endswith(suffix) or
+                original_upload_name(existing_filename) == original_filename
             ):
                 return folder_path, existing_filename
 
