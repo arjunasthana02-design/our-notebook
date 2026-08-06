@@ -245,6 +245,66 @@ DEFAULT_SECRETS = [
     ),
 ]
 
+DEFAULT_MEMORIES = [
+    {
+        "id": 1,
+        "title": "Our saved memory",
+        "summary": "A page kept available even when the database is waking up.",
+        "location": "",
+        "chapter_date": "2026-07-02",
+        "created_at": "2026-07-02",
+        "arjun_mood": "",
+        "arjun_story": "",
+        "arjun_favourite": "",
+        "bhoomi_mood": "",
+        "bhoomi_story": "",
+        "bhoomi_favourite": "",
+        "photos": [
+            "/uploads/photos/b9cee5b0-1820-4125-b2f6-18b238a37698_WhatsApp_Image_2026-07-02_at_12.20.37_AM.jpeg"
+        ],
+        "videos": [
+            "/uploads/videos/4f7f1303-fe75-43a6-a9e5-e5be875d3a7e_WhatsApp_Video_2026-07-02_at_1.50.11_PM.mp4",
+            "/uploads/videos/cd33a5d0-8da8-454e-982c-104f416bd30b_WhatsApp_Video_2026-07-02_at_12.12.46_AM.mp4"
+        ]
+    }
+]
+
+
+def timeline_fallback():
+
+    return [
+        {
+            "id": index + 1,
+            "title": title,
+            "subtitle": subtitle,
+            "chapter_order": chapter_order,
+            "is_loading": is_loading
+        }
+        for index, (title, subtitle, chapter_order, is_loading)
+        in enumerate(DEFAULT_TIMELINE)
+    ]
+
+
+def secrets_fallback(include_letters=False):
+
+    secrets = []
+
+    for index, (title, letter, _password, unlock_date) in enumerate(DEFAULT_SECRETS):
+
+        secret = {
+            "id": index + 1,
+            "title": title,
+            "unlock_date": unlock_date,
+            "locked": True
+        }
+
+        if include_letters:
+            secret["letter"] = letter
+
+        secrets.append(secret)
+
+    return secrets
+
 
 def ensure_database_schema():
 
@@ -652,53 +712,59 @@ def upload_video(chapter_id):
 @app.route("/planner", methods=["GET"])
 def get_planner():
 
-    cur = db_cursor()
+    try:
 
-    cur.execute("""
+        cur = db_cursor()
 
-        SELECT
+        cur.execute("""
 
-            meetup_id,
-            title,
-            description,
-            location,
-            target_date,
-            category,
-            priority,
-            status,
-            favourite,
-            completed
+            SELECT
 
-        FROM meetup_planner
+                meetup_id,
+                title,
+                description,
+                location,
+                target_date,
+                category,
+                priority,
+                status,
+                favourite,
+                completed
 
-        ORDER BY meetup_id DESC
+            FROM meetup_planner
 
-    """)
+            ORDER BY meetup_id DESC
 
-    rows = cur.fetchall()
+        """)
 
-    cur.close()
+        rows = cur.fetchall()
 
-    dreams = []
+        cur.close()
 
-    for row in rows:
+        dreams = []
 
-        dreams.append({
+        for row in rows:
 
-            "id": row[0],
-            "title": row[1],
-            "description": row[2],
-            "location": row[3],
-            "target_date": str(row[4]) if row[4] else "",
-            "category": row[5],
-            "priority": row[6],
-            "status": row[7],
-            "favourite": bool(row[8]),
-            "completed": bool(row[9])
+            dreams.append({
 
-        })
+                "id": row[0],
+                "title": row[1],
+                "description": row[2],
+                "location": row[3],
+                "target_date": str(row[4]) if row[4] else "",
+                "category": row[5],
+                "priority": row[6],
+                "status": row[7],
+                "favourite": bool(row[8]),
+                "completed": bool(row[9])
 
-    return jsonify(dreams)
+            })
+
+        return jsonify(dreams)
+
+    except Exception:
+
+        return jsonify([])
 
 
 # -------------------------
@@ -957,23 +1023,29 @@ def chapter_to_dict(row, media=None):
 @app.route("/chapters", methods=["GET"])
 def get_chapters():
 
-    cur = db_cursor()
+    try:
 
-    cur.execute(f"""
-        SELECT
-            {CHAPTER_COLUMNS}
-        FROM chapters
-        ORDER BY chapter_id DESC
-    """)
+        cur = db_cursor()
 
-    rows = cur.fetchall()
+        cur.execute(f"""
+            SELECT
+                {CHAPTER_COLUMNS}
+            FROM chapters
+            ORDER BY chapter_id DESC
+        """)
 
-    cur.close()
+        rows = cur.fetchall()
 
-    media = get_media_for_chapters([row[0] for row in rows])
-    memories = [chapter_to_dict(row, media) for row in rows]
+        cur.close()
 
-    return jsonify(memories)
+        media = get_media_for_chapters([row[0] for row in rows])
+        memories = [chapter_to_dict(row, media) for row in rows]
+
+        return jsonify(memories)
+
+    except Exception:
+
+        return jsonify(DEFAULT_MEMORIES)
 
 
 # -------------------------
@@ -983,28 +1055,41 @@ def get_chapters():
 @app.route("/chapters/<int:id>", methods=["GET"])
 def get_chapter(id):
 
-    cur = db_cursor()
+    try:
 
-    cur.execute(f"""
-        SELECT
-            {CHAPTER_COLUMNS}
-        FROM chapters
-        WHERE chapter_id=%s
-    """, (id,))
+        cur = db_cursor()
 
-    row = cur.fetchone()
+        cur.execute(f"""
+            SELECT
+                {CHAPTER_COLUMNS}
+            FROM chapters
+            WHERE chapter_id=%s
+        """, (id,))
 
-    cur.close()
+        row = cur.fetchone()
 
-    if not row:
+        cur.close()
+
+        if not row:
+
+            return jsonify({
+                "error": "Memory not found"
+            }),404
+
+        media = get_media_for_chapters([id])
+
+        return jsonify(chapter_to_dict(row, media))
+
+    except Exception:
+
+        memory = next((item for item in DEFAULT_MEMORIES if item["id"] == id), None)
+
+        if memory:
+            return jsonify(memory)
 
         return jsonify({
             "error": "Memory not found"
-        }),404
-
-    media = get_media_for_chapters([id])
-
-    return jsonify(chapter_to_dict(row, media))
+        }), 404
 
 
 # -------------------------
@@ -1181,38 +1266,44 @@ def delete_chapter(id):
 @app.route("/timeline", methods=["GET"])
 def get_timeline():
 
-    cur = db_cursor()
+    try:
 
-    cur.execute("""
-        SELECT
-            timeline_id,
-            title,
-            subtitle,
-            chapter_order,
-            is_loading
-        FROM timeline
-        ORDER BY is_loading ASC, chapter_order ASC, timeline_id ASC
-    """)
+        cur = db_cursor()
 
-    rows = cur.fetchall()
+        cur.execute("""
+            SELECT
+                timeline_id,
+                title,
+                subtitle,
+                chapter_order,
+                is_loading
+            FROM timeline
+            ORDER BY is_loading ASC, chapter_order ASC, timeline_id ASC
+        """)
 
-    cur.close()
+        rows = cur.fetchall()
 
-    timeline = []
+        cur.close()
 
-    for row in rows:
+        timeline = []
 
-        timeline.append({
+        for row in rows:
 
-            "id": row[0],
-            "title": row[1],
-            "subtitle": row[2],
-            "chapter_order": row[3],
-            "is_loading": bool(row[4])
+            timeline.append({
 
-        })
+                "id": row[0],
+                "title": row[1],
+                "subtitle": row[2],
+                "chapter_order": row[3],
+                "is_loading": bool(row[4])
 
-    return jsonify(timeline)
+            })
+
+        return jsonify(timeline)
+
+    except Exception:
+
+        return jsonify(timeline_fallback())
 
 
 def keep_loading_chapter_last():
@@ -1336,65 +1427,83 @@ def delete_timeline_chapter(id):
 @app.route("/photo-wall", methods=["GET"])
 def get_photo_wall():
 
-    cur = db_cursor()
-    cur.execute(f"""
-        SELECT {CHAPTER_COLUMNS}
-        FROM chapters
-        ORDER BY chapter_id DESC
-    """)
-    rows = cur.fetchall()
-    cur.close()
+    try:
 
-    media = get_media_for_chapters([row[0] for row in rows])
-    return jsonify([chapter_to_dict(row, media) for row in rows])
+        cur = db_cursor()
+        cur.execute(f"""
+            SELECT {CHAPTER_COLUMNS}
+            FROM chapters
+            ORDER BY chapter_id DESC
+        """)
+        rows = cur.fetchall()
+        cur.close()
+
+        media = get_media_for_chapters([row[0] for row in rows])
+        return jsonify([chapter_to_dict(row, media) for row in rows])
+
+    except Exception:
+
+        return jsonify(DEFAULT_MEMORIES)
 
 
 @app.route("/secrets", methods=["GET"])
 def get_secrets():
 
-    cur = db_cursor()
-    cur.execute("""
-        SELECT MIN(secret_id), title, unlock_date
-        FROM secrets
-        GROUP BY title, unlock_date
-        ORDER BY MIN(secret_id) ASC
-    """)
+    try:
 
-    rows = cur.fetchall()
-    cur.close()
+        cur = db_cursor()
+        cur.execute("""
+            SELECT MIN(secret_id), title, unlock_date
+            FROM secrets
+            GROUP BY title, unlock_date
+            ORDER BY MIN(secret_id) ASC
+        """)
 
-    return jsonify([
-        {
-            "id": row[0],
-            "title": row[1],
-            "unlock_date": str(row[2]) if row[2] else None,
-            "locked": True
-        }
-        for row in rows
-    ])
+        rows = cur.fetchall()
+        cur.close()
+
+        return jsonify([
+            {
+                "id": row[0],
+                "title": row[1],
+                "unlock_date": str(row[2]) if row[2] else None,
+                "locked": True
+            }
+            for row in rows
+        ])
+
+    except Exception:
+
+        return jsonify(secrets_fallback())
 
 
 @app.route("/secrets/all", methods=["GET"])
 def get_all_secrets():
 
-    cur = db_cursor()
-    cur.execute("""
-        SELECT secret_id, title, unlock_date
-        FROM secrets
-        ORDER BY secret_id ASC
-    """)
-    rows = cur.fetchall()
-    cur.close()
+    try:
 
-    return jsonify([
-        {
-            "id": row[0],
-            "title": row[1],
-            "unlock_date": str(row[2]) if row[2] else None,
-            "locked": True
-        }
-        for row in rows
-    ])
+        cur = db_cursor()
+        cur.execute("""
+            SELECT secret_id, title, unlock_date
+            FROM secrets
+            ORDER BY secret_id ASC
+        """)
+        rows = cur.fetchall()
+        cur.close()
+
+        return jsonify([
+            {
+                "id": row[0],
+                "title": row[1],
+                "unlock_date": str(row[2]) if row[2] else None,
+                "locked": True
+            }
+            for row in rows
+        ])
+
+    except Exception:
+
+        return jsonify(secrets_fallback())
 
 
 @app.route("/secrets/<int:id>/unlock", methods=["POST"])
@@ -1403,53 +1512,77 @@ def unlock_secret(id):
     data = request.get_json(silent=True) or {}
     password = data.get("password") or ""
 
-    cur = db_cursor()
-    cur.execute(
-        """
-        SELECT title, letter, password, unlock_date
-        FROM secrets
-        WHERE secret_id=%s
-        """,
-        (id,)
-    )
-    row = cur.fetchone()
-    cur.close()
+    try:
 
-    if not row:
-        return jsonify({"success": False, "message": "Not the right time."}), 404
+        cur = db_cursor()
+        cur.execute(
+            """
+            SELECT title, letter, password, unlock_date
+            FROM secrets
+            WHERE secret_id=%s
+            """,
+            (id,)
+        )
+        row = cur.fetchone()
+        cur.close()
 
-    unlock_date = row[3]
-    if isinstance(unlock_date, datetime):
-        unlock_date = unlock_date.date()
+        if not row:
+            return jsonify({"success": False, "message": "Not the right time."}), 404
 
-    if password != row[2] or (unlock_date and date.today() < unlock_date):
-        return jsonify({"success": False, "message": "Not the right time."}), 403
+        unlock_date = row[3]
+        if isinstance(unlock_date, datetime):
+            unlock_date = unlock_date.date()
 
-    return jsonify({
-        "success": True,
-        "title": row[0],
-        "letter": row[1]
-    })
+        if password != row[2] or (unlock_date and date.today() < unlock_date):
+            return jsonify({"success": False, "message": "Not the right time."}), 403
+
+        return jsonify({
+            "success": True,
+            "title": row[0],
+            "letter": row[1]
+        })
+
+    except Exception:
+
+        if id < 1 or id > len(DEFAULT_SECRETS):
+            return jsonify({"success": False, "message": "Not the right time."}), 404
+
+        title, letter, fallback_password, unlock_date = DEFAULT_SECRETS[id - 1]
+
+        if password != fallback_password:
+            return jsonify({"success": False, "message": "Not the right time."}), 403
+
+        return jsonify({
+            "success": True,
+            "title": title,
+            "letter": letter
+        })
 
 
 @app.route("/open-when-notes", methods=["GET"])
 def get_open_when_notes():
 
-    cur = db_cursor()
-    cur.execute("""
-        SELECT note_id, note_text
-        FROM open_when_notes
-    """)
-    rows = cur.fetchall()
-    cur.close()
+    try:
 
-    return jsonify([
-        {
-            "id": row[0],
-            "text": row[1] or ""
-        }
-        for row in rows
-    ])
+        cur = db_cursor()
+        cur.execute("""
+            SELECT note_id, note_text
+            FROM open_when_notes
+        """)
+        rows = cur.fetchall()
+        cur.close()
+
+        return jsonify([
+            {
+                "id": row[0],
+                "text": row[1] or ""
+            }
+            for row in rows
+        ])
+
+    except Exception:
+
+        return jsonify([])
 
 
 @app.route("/open-when-notes/<note_id>", methods=["PUT"])
