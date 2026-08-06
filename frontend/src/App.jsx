@@ -13,6 +13,7 @@ import PhotoWall from "./pages/PhotoWall";
 import OpenWhen from "./pages/OpenWhen";
 import Birthday from "./pages/Birthday";
 import Playlist from "./pages/Playlist";
+import Ppt from "./pages/Ppt";
 import Settings from "./pages/Settings";
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
         <Route path="/open-when" element={<OpenWhen />} />
         <Route path="/birthday" element={<Birthday />} />
         <Route path="/playlist" element={<Playlist />} />
+        <Route path="/ppt" element={<Ppt />} />
 
         <Route path="/settings" element={<Settings />} />
 

@@ -12,6 +12,7 @@ const emptyForm = {
 export default function Timeline() {
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -23,11 +24,33 @@ export default function Timeline() {
 
   async function loadTimeline() {
     try {
+      setError("");
+      setLoading(true);
       const res = await fetch(apiUrl("/timeline"));
+
+      if (!res.ok) {
+        throw new Error("Timeline could not be loaded.");
+      }
+
       const data = await res.json();
-      setChapters(Array.isArray(data) ? data : []);
+
+      if (!Array.isArray(data)) {
+        throw new Error(data.error || "Timeline response was not valid.");
+      }
+
+      const sortedChapters = [...data].sort((a, b) => {
+        if (Boolean(a.is_loading) !== Boolean(b.is_loading)) {
+          return Number(a.is_loading) - Number(b.is_loading);
+        }
+
+        return Number(a.chapter_order || 0) - Number(b.chapter_order || 0);
+      });
+
+      setChapters(sortedChapters);
     } catch (err) {
       console.error(err);
+      setError(err.message || "Timeline could not be loaded.");
+      setChapters([]);
     } finally {
       setLoading(false);
     }
@@ -176,6 +199,22 @@ export default function Timeline() {
 
         {loading ? (
           <div className="timeline-loading">Loading Timeline...</div>
+        ) : error ? (
+          <section className="timeline-state">
+            <h2>Timeline is taking a moment</h2>
+            <p>{error}</p>
+            <button className="notebook-button" onClick={loadTimeline}>
+              Try Again
+            </button>
+          </section>
+        ) : chapters.length === 0 ? (
+          <section className="timeline-state">
+            <h2>No timeline chapters yet</h2>
+            <p>Add the first chapter and it will appear here.</p>
+            <button className="notebook-button" onClick={startAddChapter}>
+              Add Chapter
+            </button>
+          </section>
         ) : (
           <div className="timeline-list">
             {chapters.map((chapter) => (

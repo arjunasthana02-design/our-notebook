@@ -56,9 +56,6 @@ def first_env(*names, default=None):
 
 def normalize_mysql_host(host):
 
-    if host == "ayabusa.proxy.rlwy.net":
-        return "hayabusa.proxy.rlwy.net"
-
     return host
 
 
@@ -306,6 +303,18 @@ def secrets_fallback(include_letters=False):
     return secrets
 
 
+def get_mysql_connection():
+
+    connection = mysql.connection
+
+    try:
+        connection.ping(True)
+    except TypeError:
+        connection.ping(reconnect=True)
+
+    return connection
+
+
 def ensure_database_schema():
 
     global schema_ready
@@ -313,7 +322,8 @@ def ensure_database_schema():
     if schema_ready:
         return
 
-    cur = mysql.connection.cursor()
+    connection = get_mysql_connection()
+    cur = connection.cursor()
 
     for statement in SCHEMA_STATEMENTS:
         cur.execute(statement)
@@ -367,7 +377,7 @@ def ensure_database_schema():
             DEFAULT_SECRETS
         )
 
-    mysql.connection.commit()
+    connection.commit()
     cur.close()
     schema_ready = True
 
@@ -385,7 +395,7 @@ def ensure_column(cur, table_name, column_name, column_definition):
 def db_cursor():
 
     ensure_database_schema()
-    return mysql.connection.cursor()
+    return get_mysql_connection().cursor()
 
 
 def mysql_config_status():

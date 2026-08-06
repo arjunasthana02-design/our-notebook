@@ -103,6 +103,15 @@ export default function ScrapbookLayout({
           </Link>
 
           <Link
+            to="/ppt"
+            className={`scrapbook-link ${
+              location.pathname === "/ppt" ? "active-link" : ""
+            }`}
+          >
+            PPT
+          </Link>
+
+          <Link
             to="/chapters"
             className={`scrapbook-link ${
               location.pathname === "/chapters" ? "active-link" : ""
