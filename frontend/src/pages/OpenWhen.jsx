@@ -40,6 +40,26 @@ const DEFAULT_NOTES = [
   }
 ];
 
+function readNotesBackup() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || "[]");
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeNotesBackup(notes) {
+  localStorage.setItem(
+    LEGACY_STORAGE_KEY,
+    JSON.stringify(notes.map(({ id, text }) => ({ id, text })))
+  );
+}
+
+function noteHasText(note) {
+  return Boolean(note && String(note.text || "").trim());
+}
+
 export default function OpenWhen() {
   const [notes, setNotes] = useState(DEFAULT_NOTES);
   const [password, setPassword] = useState("");
@@ -55,18 +75,18 @@ export default function OpenWhen() {
     async function loadNotes() {
       try {
         const response = await fetch(apiUrl("/open-when-notes"));
+
+        if (!response.ok) {
+          throw new Error("Could not load shared letters.");
+        }
+
         const saved = await response.json();
 
         if (!active) return;
 
-        let legacySaved = [];
-        try {
-          legacySaved = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || "[]");
-        } catch {
-          legacySaved = [];
-        }
+        const legacySaved = readNotesBackup();
 
-        setNotes(
+        const nextNotes = (
           DEFAULT_NOTES.map((note) => {
             const sharedNote = Array.isArray(saved)
               ? saved.find((item) => item.id === note.id)
@@ -74,18 +94,33 @@ export default function OpenWhen() {
             const legacyNote = Array.isArray(legacySaved)
               ? legacySaved.find((item) => item.id === note.id)
               : null;
+            const bestNote = noteHasText(sharedNote) ? sharedNote : legacyNote;
 
             return {
               ...note,
-              ...(sharedNote || legacyNote || {})
+              ...(bestNote || sharedNote || legacyNote || {})
             };
           })
         );
+
+        setNotes(nextNotes);
+        writeNotesBackup(nextNotes);
         setSaveMessage("Saved for both browsers.");
         setNotesLoaded(true);
       } catch {
         if (active) {
-          setSaveMessage("Could not load shared letters.");
+          const legacySaved = readNotesBackup();
+          setNotes(
+            DEFAULT_NOTES.map((note) => {
+              const legacyNote = legacySaved.find((item) => item.id === note.id);
+              return {
+                ...note,
+                ...(legacyNote || {})
+              };
+            })
+          );
+          setSaveMessage("Using saved letters on this browser.");
+          setNotesLoaded(true);
         }
       }
     }
@@ -104,9 +139,13 @@ export default function OpenWhen() {
   const activeNote = notes.find((note) => note.id === activeNoteId);
 
   function updateNote(id, value) {
-    setNotes((current) =>
-      current.map((note) => (note.id === id ? { ...note, text: value } : note))
-    );
+    setNotes((current) => {
+      const nextNotes = current.map((note) =>
+        note.id === id ? { ...note, text: value } : note
+      );
+      writeNotesBackup(nextNotes);
+      return nextNotes;
+    });
     setSaveMessage("Saving...");
   }
 
@@ -114,10 +153,11 @@ export default function OpenWhen() {
     if (!notesLoaded) return;
 
     const notesToSave = notes.map(({ id, text }) => ({ id, text }));
+    writeNotesBackup(notes);
 
     const timer = setTimeout(async () => {
       try {
-        await Promise.all(
+        const responses = await Promise.all(
           notesToSave.map((note) =>
             fetch(apiUrl(`/open-when-notes/${note.id}`), {
               method: "PUT",
@@ -128,9 +168,14 @@ export default function OpenWhen() {
             })
           )
         );
+
+        if (responses.some((response) => !response.ok)) {
+          throw new Error("Could not save to the website.");
+        }
+
         setSaveMessage("Saved for both browsers.");
       } catch {
-        setSaveMessage("Could not save to the website.");
+        setSaveMessage("Saved on this browser. Website database is reconnecting.");
       }
     }, 500);
 

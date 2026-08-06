@@ -56,6 +56,9 @@ def first_env(*names, default=None):
 
 def normalize_mysql_host(host):
 
+    if host == "ayabusa.proxy.rlwy.net":
+        return "hayabusa.proxy.rlwy.net"
+
     return host
 
 
@@ -226,11 +229,31 @@ SCHEMA_STATEMENTS = [
 ]
 
 DEFAULT_TIMELINE = [
-    ("First Time Seeing", "The first page where everything quietly began.", 1, False),
-    ("First Conversation", "A small hello that became part of our story.", 2, False),
-    ("First Rejection", "Even the almosts deserve a page.", 3, False),
-    ("First Meeting", "The day distance turned into a real moment.", 4, False),
-    ("Loading...", "Some chapters are still waiting to happen.", 5, True),
+    (
+        "First Time Seeing",
+        "30 july 2022 you were wearing a white tshirt black pajamas and purple headband and I am pretty certain. .",
+        1,
+        False
+    ),
+    (
+        "First Conversation",
+        "15 April 2023 I texted hi finally took me ages though but I did.",
+        2,
+        False
+    ),
+    (
+        "First Rejection",
+        "26 Jan 2026 you rejected me without even me asking you out and called me brother.... fucking hated you for it but yeah i dont blame you you had a boyfriend.",
+        3,
+        False
+    ),
+    (
+        "First Meeting",
+        "Finally, a page worth waiting for.26 June 2026 ig I dont have to mention anything about it it was perfect",
+        4,
+        False
+    ),
+    ("Loading...", "Reserved for our next first.", 5, True),
 ]
 
 DEFAULT_SECRETS = [
