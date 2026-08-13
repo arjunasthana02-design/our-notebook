@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import ScrapbookLayout from "../components/ScrapbookLayout";
-import { apiUrl } from "../services/api";
+import { apiFetch } from "../services/api";
 import "./Timeline.css";
 
 const emptyForm = {
@@ -93,7 +93,7 @@ export default function Timeline() {
     try {
       setError("");
       setLoading(true);
-      const res = await fetch(apiUrl("/timeline"));
+      const res = await apiFetch("/timeline");
 
       if (!res.ok) {
         throw new Error("Timeline could not be loaded.");
@@ -156,8 +156,8 @@ export default function Timeline() {
 
     try {
       setSaving(true);
-      const response = await fetch(
-        editingId ? apiUrl(`/timeline/${editingId}`) : apiUrl("/timeline"),
+      const response = await apiFetch(
+        editingId ? `/timeline/${editingId}` : "/timeline",
         {
           method: editingId ? "PUT" : "POST",
           headers: {
@@ -219,7 +219,7 @@ export default function Timeline() {
     if (!window.confirm("Delete this chapter?")) return;
 
     try {
-      const response = await fetch(apiUrl(`/timeline/${chapter.id}`), {
+      const response = await apiFetch(`/timeline/${chapter.id}`, {
         method: "DELETE"
       });
       const result = await response.json();

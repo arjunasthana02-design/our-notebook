@@ -1,4 +1,4 @@
-import { apiUrl } from "../services/api";
+import { apiFetch } from "../services/api";
 import { useState, useEffect } from "react";
 import ScrapbookLayout from "../components/ScrapbookLayout";
 import {
@@ -6,6 +6,7 @@ import {
   priorities,
   statuses,
 } from "../data/notebookData";
+import { restorePlannerWhenMissing } from "../data/restoredNotebookData";
 
 export default function Planner() {
 
@@ -33,11 +34,11 @@ export default function Planner() {
   const loadDreams = async () => {
     try {
 
-      const res = await fetch(apiUrl("/planner"));
+      const res = await apiFetch("/planner");
 
       const data = await res.json();
 
-      setDreams(data);
+      setDreams(restorePlannerWhenMissing(data));
 
     } catch (err) {
 
@@ -85,7 +86,7 @@ export default function Planner() {
 
       if (editingId !== null) {
 
-        await fetch(apiUrl(`/planner/${editingId}`), {
+        await apiFetch(`/planner/${editingId}`, {
 
           method: "PUT",
 
@@ -105,7 +106,7 @@ export default function Planner() {
 
       } else {
 
-        await fetch(apiUrl("/planner"), {
+        await apiFetch("/planner", {
 
           method: "POST",
 
@@ -155,7 +156,7 @@ export default function Planner() {
 
     try {
 
-      await fetch(apiUrl(`/planner/${id}`), {
+      await apiFetch(`/planner/${id}`, {
         method: "DELETE"
       });
 
@@ -207,7 +208,7 @@ export default function Planner() {
 
     try {
 
-      await fetch(apiUrl(`/planner/${id}`), {
+      await apiFetch(`/planner/${id}`, {
 
         method: "PUT",
 

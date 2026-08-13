@@ -1,7 +1,8 @@
 import { Link, useParams } from "react-router-dom";
 import ScrapbookLayout from "../components/ScrapbookLayout";
 import { useEffect, useState } from "react";
-import { apiUrl, mediaUrl } from "../services/api";
+import { apiFetch, mediaUrl } from "../services/api";
+import { restoreMemoryWhenMissing } from "../data/restoredNotebookData";
 
 export default function Memory() {
 
@@ -21,11 +22,11 @@ export default function Memory() {
 
     try {
 
-      const res = await fetch(apiUrl(`/chapters/${id}`));
+      const res = await apiFetch(`/chapters/${id}`);
 
       const data = await res.json();
 
-      setMemory(res.ok ? data : null);
+      setMemory(res.ok ? restoreMemoryWhenMissing(data, id) : restoreMemoryWhenMissing(null, id));
 
     } catch (err) {
 

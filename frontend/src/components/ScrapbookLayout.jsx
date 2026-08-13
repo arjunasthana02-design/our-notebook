@@ -94,6 +94,15 @@ export default function ScrapbookLayout({
           </Link>
 
           <Link
+            to="/friendship-bands"
+            className={`scrapbook-link ${
+              location.pathname === "/friendship-bands" ? "active-link" : ""
+            }`}
+          >
+            Bands
+          </Link>
+
+          <Link
             to="/playlist"
             className={`scrapbook-link ${
               location.pathname === "/playlist" ? "active-link" : ""

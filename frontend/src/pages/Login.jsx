@@ -1,4 +1,4 @@
-import { apiUrl } from "../services/api";
+import { apiUrl, setAuthToken } from "../services/api";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -32,7 +32,7 @@ export default function Login() {
 
       if (data.success) {
 
-        localStorage.setItem("loggedIn", "true");
+        setAuthToken(data.token);
 
         navigate("/cover");
 

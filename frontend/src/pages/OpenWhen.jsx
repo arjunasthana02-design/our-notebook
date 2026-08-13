@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ScrapbookLayout from "../components/ScrapbookLayout";
-import { apiUrl } from "../services/api";
+import { apiFetch } from "../services/api";
 import "./NotebookExtras.css";
 
 const LEGACY_STORAGE_KEY = "notebook-open-when-notes";
@@ -74,7 +74,7 @@ export default function OpenWhen() {
 
     async function loadNotes() {
       try {
-        const response = await fetch(apiUrl("/open-when-notes"));
+        const response = await apiFetch("/open-when-notes");
 
         if (!response.ok) {
           throw new Error("Could not load shared letters.");
@@ -159,7 +159,7 @@ export default function OpenWhen() {
       try {
         const responses = await Promise.all(
           notesToSave.map((note) =>
-            fetch(apiUrl(`/open-when-notes/${note.id}`), {
+            apiFetch(`/open-when-notes/${note.id}`, {
               method: "PUT",
               headers: {
                 "Content-Type": "application/json"

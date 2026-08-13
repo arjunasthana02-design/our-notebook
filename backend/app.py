@@ -1,5 +1,7 @@
 import os
 import uuid
+import hashlib
+import hmac
 from datetime import date, datetime
 from urllib.parse import unquote, urlparse
 
@@ -10,6 +12,38 @@ from flask_mysqldb import MySQL
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+
+NOTEBOOK_PASSWORD = os.getenv("NOTEBOOK_PASSWORD", "Bhoomi0903")
+AUTH_SECRET = os.getenv(
+    "NOTEBOOK_AUTH_SECRET",
+    os.getenv("SECRET_KEY", "notebook-local-auth-secret")
+)
+
+
+def auth_token():
+
+    return hmac.new(
+        AUTH_SECRET.encode("utf-8"),
+        NOTEBOOK_PASSWORD.encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
+
+
+def request_auth_token():
+
+    header = request.headers.get("Authorization", "")
+
+    if header.startswith("Bearer "):
+        return header.removeprefix("Bearer ").strip()
+
+    return (request.args.get("auth_token") or "").strip()
+
+
+def is_authenticated_request():
+
+    token = request_auth_token()
+
+    return bool(token) and hmac.compare_digest(token, auth_token())
 
 
 @app.errorhandler(Exception)
@@ -37,6 +71,28 @@ def handle_preflight():
 
     if request.method == "OPTIONS":
         return "", 204
+
+
+@app.before_request
+def require_notebook_password():
+
+    public_endpoints = {
+        "home",
+        "login",
+        "test_db",
+        "static"
+    }
+
+    if request.endpoint in public_endpoints:
+        return None
+
+    if is_authenticated_request():
+        return None
+
+    return jsonify({
+        "success": False,
+        "error": "Password required"
+    }), 401
 
 # ==========================================
 # MYSQL CONFIG
@@ -265,17 +321,42 @@ DEFAULT_SECRETS = [
     ),
 ]
 
+DEFAULT_PLANNER = [
+    (
+        "Visit Mumbai",
+        "A 3-4 day trip to Mumbai ",
+        "",
+        "",
+        "Travel",
+        "Dream Goal",
+        "Planning",
+        False,
+        False
+    ),
+    (
+        "MKT Trip",
+        "Trying MKT's Food",
+        "",
+        "soon",
+        "Food",
+        "High",
+        "Not Started",
+        False,
+        False
+    )
+]
+
 DEFAULT_MEMORIES = [
     {
         "id": 1,
-        "title": "Our saved memory",
-        "summary": "A page kept available even when the database is waking up.",
-        "location": "",
-        "chapter_date": "2026-07-02",
+        "title": "Our First Meeting",
+        "summary": "Finally meeting for the first time after ages",
+        "location": "DLF, Sec-18, Teashop, Arun Vihar,BP Market, Sec 46 Market.",
+        "chapter_date": "26 June 2026",
         "created_at": "2026-07-02",
-        "arjun_mood": "",
-        "arjun_story": "",
-        "arjun_favourite": "",
+        "arjun_mood": "Nervous ,Happy ,Peaceful",
+        "arjun_story": "So firstly She has been ignoring the shit out of me for 3 years and when we finally meet WTF WHY IS SHE SO PRETTY SHE LITERALLY MADE ME NERVOUS like I remember i saw her once during our internship meeting there she looked really nice also first time I saw her in school i mean obviously she was pretty back then too thats why i followed her in the first place also on her insta too she looks beautiful BUT SAAMNE SE ITNA ACHA KON LAGTA HAI??????  it was probably the most peaceful i have ever found myself her talking non stop for some reasons gave me immense pleasure and happiness and for the first time i was  not using my phone while being in someone's company or should i say for the first time I felt like I am free to feel emotions. I mean I told her about my father first meeting pe I havent told it to many of my close friends. First day was so good so much walking so much talking although i was late kinda still feel bad about it or else we would have got 1 more hour and then second day when our plan of gaming got cancelled we walked till 46 ka market and had coffee and the kids forcing her for the interview I found her to be very adorable at that moment but the best part was her trying to make me laugh watching those reels like wtf why is she laughing at literally everything and why is her laughs making me so happy probably because how pure her laughs were or because it was new for me, genuinely laughing with someone. Cant wait to be back in Noida. Already trying to find excuses",
+        "arjun_favourite": "Sitting near the fountain talking",
         "bhoomi_mood": "",
         "bhoomi_story": "",
         "bhoomi_favourite": "",
@@ -288,6 +369,178 @@ DEFAULT_MEMORIES = [
         ]
     }
 ]
+
+LEGACY_DEFAULT_MEMORY_TITLES = [
+    "Our saved memory",
+    "First Meeting"
+]
+
+def restore_default_memory(cur):
+
+    default_memory = DEFAULT_MEMORIES[0]
+
+    cur.execute(
+        """
+        SELECT chapter_id
+        FROM chapters
+        WHERE title=%s OR title IN (%s,%s)
+        ORDER BY chapter_id DESC
+        LIMIT 1
+        """,
+        (
+            default_memory["title"],
+            LEGACY_DEFAULT_MEMORY_TITLES[0],
+            LEGACY_DEFAULT_MEMORY_TITLES[1],
+        )
+    )
+
+    row = cur.fetchone()
+
+    if not row:
+        seed_default_memory(cur)
+        return
+
+    chapter_id = row[0]
+
+    cur.execute(
+        """
+        UPDATE chapters
+        SET
+            title=%s,
+            summary=%s,
+            location=%s,
+            chapter_date=%s,
+            arjun_mood=%s,
+            arjun_story=%s,
+            arjun_favourite=%s,
+            bhoomi_mood=%s,
+            bhoomi_story=%s,
+            bhoomi_favourite=%s
+        WHERE chapter_id=%s
+        """,
+        (
+            default_memory["title"],
+            default_memory["summary"],
+            default_memory["location"],
+            default_memory["chapter_date"],
+            default_memory["arjun_mood"],
+            default_memory["arjun_story"],
+            default_memory["arjun_favourite"],
+            default_memory["bhoomi_mood"],
+            default_memory["bhoomi_story"],
+            default_memory["bhoomi_favourite"],
+            chapter_id,
+        )
+    )
+
+    for photo_path in default_memory["photos"]:
+        cur.execute(
+            """
+            INSERT INTO photos (chapter_id, photo_path)
+            SELECT %s,%s
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM photos
+                WHERE chapter_id=%s AND photo_path=%s
+            )
+            """,
+            (chapter_id, photo_path, chapter_id, photo_path)
+        )
+
+    for video_path in default_memory["videos"]:
+        cur.execute(
+            """
+            INSERT INTO videos (chapter_id, video_path)
+            SELECT %s,%s
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM videos
+                WHERE chapter_id=%s AND video_path=%s
+            )
+            """,
+            (chapter_id, video_path, chapter_id, video_path)
+        )
+
+
+def restore_default_planner(cur):
+
+    cur.execute("SELECT COUNT(*) FROM meetup_planner")
+
+    if cur.fetchone()[0] > 0:
+        return
+
+    cur.executemany(
+        """
+        INSERT INTO meetup_planner
+        (
+            title,
+            description,
+            location,
+            target_date,
+            category,
+            priority,
+            status,
+            favourite,
+            completed
+        )
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """,
+        DEFAULT_PLANNER
+    )
+
+
+def seed_default_memory(cur):
+
+    default_memory = DEFAULT_MEMORIES[0]
+
+    cur.execute(
+        """
+        INSERT INTO chapters
+        (
+            title,
+            summary,
+            location,
+            chapter_date,
+            arjun_mood,
+            arjun_story,
+            arjun_favourite,
+            bhoomi_mood,
+            bhoomi_story,
+            bhoomi_favourite
+        )
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """,
+        (
+            default_memory["title"],
+            default_memory["summary"],
+            default_memory["location"],
+            default_memory["chapter_date"],
+            default_memory["arjun_mood"],
+            default_memory["arjun_story"],
+            default_memory["arjun_favourite"],
+            default_memory["bhoomi_mood"],
+            default_memory["bhoomi_story"],
+            default_memory["bhoomi_favourite"],
+        )
+    )
+
+    chapter_id = cur.lastrowid
+
+    cur.executemany(
+        """
+        INSERT INTO photos (chapter_id, photo_path)
+        VALUES (%s,%s)
+        """,
+        [(chapter_id, photo_path) for photo_path in default_memory["photos"]]
+    )
+
+    cur.executemany(
+        """
+        INSERT INTO videos (chapter_id, video_path)
+        VALUES (%s,%s)
+        """,
+        [(chapter_id, video_path) for video_path in default_memory["videos"]]
+    )
 
 
 def timeline_fallback():
@@ -399,6 +652,9 @@ def ensure_database_schema():
             """,
             DEFAULT_SECRETS
         )
+
+    restore_default_planner(cur)
+    restore_default_memory(cur)
 
     connection.commit()
     cur.close()
@@ -540,10 +796,11 @@ def login():
 
     password = data.get("password")
 
-    if password == "Bhoomi0903":
+    if password == NOTEBOOK_PASSWORD:
 
         return jsonify({
-            "success": True
+            "success": True,
+            "token": auth_token()
         })
 
     return jsonify({

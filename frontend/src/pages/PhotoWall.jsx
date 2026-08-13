@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import ScrapbookLayout from "../components/ScrapbookLayout";
-import { apiUrl, mediaUrl } from "../services/api";
+import { apiFetch, mediaUrl } from "../services/api";
+import { restoreMemoriesWhenMissing } from "../data/restoredNotebookData";
 import "./NotebookExtras.css";
 
 export default function PhotoWall() {
@@ -13,9 +14,9 @@ export default function PhotoWall() {
   }, []);
 
   async function loadMemories() {
-    const response = await fetch(apiUrl("/photo-wall"));
+    const response = await apiFetch("/photo-wall");
     const data = await response.json();
-    setMemories(Array.isArray(data) ? data : []);
+    setMemories(restoreMemoriesWhenMissing(data));
   }
 
   async function uploadMedia(memoryId, files) {
@@ -26,7 +27,7 @@ export default function PhotoWall() {
       const form = new FormData();
       const isVideo = file.type.startsWith("video/");
       form.append(isVideo ? "video" : "photo", file);
-      await fetch(apiUrl(`/${isVideo ? "upload-video" : "upload-photo"}/${memoryId}`), {
+      await apiFetch(`/${isVideo ? "upload-video" : "upload-photo"}/${memoryId}`, {
         method: "POST",
         body: form
       });

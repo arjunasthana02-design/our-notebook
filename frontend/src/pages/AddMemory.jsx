@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ScrapbookLayout from "../components/ScrapbookLayout";
-import { apiUrl } from "../services/api";
+import { apiFetch } from "../services/api";
 
 export default function AddMemory() {
 
@@ -43,9 +43,7 @@ export default function AddMemory() {
 
         setLoading(true);
 
-        const response = await fetch(
-          apiUrl(`/chapters/${id}`)
-        );
+        const response = await apiFetch(`/chapters/${id}`);
 
         const data = await response.json();
 
@@ -119,10 +117,10 @@ export default function AddMemory() {
       setLoading(true);
 
       const chapterUrl = isEditing
-        ? apiUrl(`/chapters/${id}`)
-        : apiUrl("/chapters");
+        ? `/chapters/${id}`
+        : "/chapters";
 
-      const response = await fetch(
+      const response = await apiFetch(
         chapterUrl,
         {
 
@@ -169,9 +167,9 @@ export default function AddMemory() {
 
         data.append("photo", photo);
 
-        await fetch(
+        await apiFetch(
 
-          apiUrl(`/upload-photo/${chapterId}`),
+          `/upload-photo/${chapterId}`,
 
           {
 
@@ -191,9 +189,9 @@ export default function AddMemory() {
 
         data.append("video", video);
 
-        await fetch(
+        await apiFetch(
 
-          apiUrl(`/upload-video/${chapterId}`),
+          `/upload-video/${chapterId}`,
 
           {
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import ScrapbookLayout from "../components/ScrapbookLayout";
-import { apiUrl } from "../services/api";
+import { apiFetch } from "../services/api";
+import { restoreMemoriesWhenMissing } from "../data/restoredNotebookData";
 
 export default function Chapters() {
 
@@ -25,13 +26,11 @@ export default function Chapters() {
 
     try {
 
-      const response = await fetch(
-        apiUrl("/chapters")
-      );
+      const response = await apiFetch("/chapters");
 
       const data = await response.json();
 
-      setMemories(data);
+      setMemories(restoreMemoriesWhenMissing(data));
 
     }
 
@@ -56,9 +55,9 @@ export default function Chapters() {
 
     try {
 
-      const response = await fetch(
+      const response = await apiFetch(
 
-        apiUrl(`/chapters/${id}`),
+        `/chapters/${id}`,
 
         {
 
