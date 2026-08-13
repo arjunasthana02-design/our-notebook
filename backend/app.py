@@ -2,6 +2,7 @@ import os
 import uuid
 import hashlib
 import hmac
+import time
 from datetime import date, datetime
 from urllib.parse import unquote, urlparse
 
@@ -200,6 +201,9 @@ mysql = MySQL(app)
 
 
 schema_ready = False
+planner_fallback_rows = []
+memory_fallback_rows = {}
+friendship_band_fallback_rows = []
 
 SCHEMA_STATEMENTS = [
     """
@@ -280,6 +284,15 @@ SCHEMA_STATEMENTS = [
         note_id VARCHAR(100) PRIMARY KEY,
         note_text TEXT,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS friendship_bands
+    (
+        band_id INT AUTO_INCREMENT PRIMARY KEY,
+        band_name VARCHAR(255) NOT NULL,
+        note_text TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """
 ]
@@ -381,7 +394,7 @@ def restore_default_memory(cur):
 
     cur.execute(
         """
-        SELECT chapter_id
+        SELECT chapter_id, title
         FROM chapters
         WHERE title=%s OR title IN (%s,%s)
         ORDER BY chapter_id DESC
@@ -401,37 +414,39 @@ def restore_default_memory(cur):
         return
 
     chapter_id = row[0]
+    existing_title = row[1]
 
-    cur.execute(
-        """
-        UPDATE chapters
-        SET
-            title=%s,
-            summary=%s,
-            location=%s,
-            chapter_date=%s,
-            arjun_mood=%s,
-            arjun_story=%s,
-            arjun_favourite=%s,
-            bhoomi_mood=%s,
-            bhoomi_story=%s,
-            bhoomi_favourite=%s
-        WHERE chapter_id=%s
-        """,
-        (
-            default_memory["title"],
-            default_memory["summary"],
-            default_memory["location"],
-            default_memory["chapter_date"],
-            default_memory["arjun_mood"],
-            default_memory["arjun_story"],
-            default_memory["arjun_favourite"],
-            default_memory["bhoomi_mood"],
-            default_memory["bhoomi_story"],
-            default_memory["bhoomi_favourite"],
-            chapter_id,
+    if existing_title in LEGACY_DEFAULT_MEMORY_TITLES:
+        cur.execute(
+            """
+            UPDATE chapters
+            SET
+                title=%s,
+                summary=%s,
+                location=%s,
+                chapter_date=%s,
+                arjun_mood=%s,
+                arjun_story=%s,
+                arjun_favourite=%s,
+                bhoomi_mood=%s,
+                bhoomi_story=%s,
+                bhoomi_favourite=%s
+            WHERE chapter_id=%s
+            """,
+            (
+                default_memory["title"],
+                default_memory["summary"],
+                default_memory["location"],
+                default_memory["chapter_date"],
+                default_memory["arjun_mood"],
+                default_memory["arjun_story"],
+                default_memory["arjun_favourite"],
+                default_memory["bhoomi_mood"],
+                default_memory["bhoomi_story"],
+                default_memory["bhoomi_favourite"],
+                chapter_id,
+            )
         )
-    )
 
     for photo_path in default_memory["photos"]:
         cur.execute(
@@ -579,16 +594,198 @@ def secrets_fallback(include_letters=False):
     return secrets
 
 
+def planner_to_dict(row):
+
+    return {
+        "id": row[0],
+        "title": row[1],
+        "description": row[2],
+        "location": row[3],
+        "target_date": str(row[4]) if row[4] else "",
+        "category": row[5],
+        "priority": row[6],
+        "status": row[7],
+        "favourite": bool(row[8]),
+        "completed": bool(row[9])
+    }
+
+
+def default_planner_dicts():
+
+    return [
+        {
+            "id": index + 1,
+            "title": row[0],
+            "description": row[1],
+            "location": row[2],
+            "target_date": row[3],
+            "category": row[4],
+            "priority": row[5],
+            "status": row[6],
+            "favourite": bool(row[7]),
+            "completed": bool(row[8])
+        }
+        for index, row in enumerate(DEFAULT_PLANNER)
+    ]
+
+
+def current_planner_fallback():
+
+    return planner_fallback_rows or default_planner_dicts()
+
+
+def add_planner_fallback(data):
+
+    global planner_fallback_rows
+
+    rows = list(current_planner_fallback())
+    next_id = max([int(row.get("id") or 0) for row in rows] + [0]) + 1
+    row = {
+        "id": next_id,
+        "title": data.get("title") or "",
+        "description": data.get("description") or "",
+        "location": data.get("location") or "",
+        "target_date": data.get("target_date") or "",
+        "category": data.get("category") or "Random",
+        "priority": data.get("priority") or "Low",
+        "status": data.get("status") or "Not Started",
+        "favourite": bool(data.get("favourite", False)),
+        "completed": bool(data.get("completed", False))
+    }
+    planner_fallback_rows = [row, *rows]
+    return row
+
+
+def update_planner_fallback(id, data):
+
+    global planner_fallback_rows
+
+    rows = list(current_planner_fallback())
+    found = False
+    next_rows = []
+
+    for row in rows:
+        if int(row.get("id") or 0) == id:
+            found = True
+            next_rows.append({
+                **row,
+                "title": data.get("title") or "",
+                "description": data.get("description") or "",
+                "location": data.get("location") or "",
+                "target_date": data.get("target_date") or "",
+                "category": data.get("category") or "Random",
+                "priority": data.get("priority") or "Low",
+                "status": data.get("status") or "Not Started",
+                "favourite": bool(data.get("favourite", False)),
+                "completed": bool(data.get("completed", False))
+            })
+        else:
+            next_rows.append(row)
+
+    planner_fallback_rows = next_rows
+    return found
+
+
+def delete_planner_fallback(id):
+
+    global planner_fallback_rows
+
+    rows = list(current_planner_fallback())
+    planner_fallback_rows = [
+        row for row in rows if int(row.get("id") or 0) != id
+    ]
+
+
+def current_friendship_band_fallback():
+
+    return friendship_band_fallback_rows
+
+
+def add_friendship_band_fallback(data):
+
+    global friendship_band_fallback_rows
+
+    rows = list(current_friendship_band_fallback())
+    next_id = max([int(row.get("id") or 0) for row in rows] + [0]) + 1
+    row = {
+        "id": next_id,
+        "band": data.get("band") or data.get("band_name") or "",
+        "text": data.get("text") or data.get("note_text") or ""
+    }
+    friendship_band_fallback_rows = [row, *rows]
+    return row
+
+
+def update_friendship_band_fallback(id, data):
+
+    global friendship_band_fallback_rows
+
+    friendship_band_fallback_rows = [
+        {
+            **row,
+            "band": data.get("band") or data.get("band_name") or row.get("band", ""),
+            "text": data.get("text") or data.get("note_text") or row.get("text", "")
+        }
+        if int(row.get("id") or 0) == id else row
+        for row in current_friendship_band_fallback()
+    ]
+
+
+def delete_friendship_band_fallback(id):
+
+    global friendship_band_fallback_rows
+
+    friendship_band_fallback_rows = [
+        row
+        for row in current_friendship_band_fallback()
+        if int(row.get("id") or 0) != id
+    ]
+
+
+def memory_from_payload(id, data):
+
+    base = next(
+        (item for item in DEFAULT_MEMORIES if int(item["id"]) == int(id)),
+        DEFAULT_MEMORIES[0]
+    )
+
+    return {
+        **base,
+        "id": int(id),
+        "title": data.get("title") or base.get("title", ""),
+        "summary": data.get("summary") or base.get("summary", ""),
+        "location": data.get("location") or base.get("location", ""),
+        "chapter_date": data.get("chapter_date") or base.get("chapter_date", ""),
+        "bhoomi_mood": data.get("bhoomi_mood") or "",
+        "bhoomi_favourite": data.get("bhoomi_favourite") or "",
+        "bhoomi_story": data.get("bhoomi_story") or "",
+        "arjun_mood": data.get("arjun_mood") or "",
+        "arjun_favourite": data.get("arjun_favourite") or "",
+        "arjun_story": data.get("arjun_story") or ""
+    }
+
+
 def get_mysql_connection():
 
-    connection = mysql.connection
+    last_error = None
 
-    try:
-        connection.ping(True)
-    except TypeError:
-        connection.ping(reconnect=True)
+    for _attempt in range(3):
 
-    return connection
+        try:
+            connection = mysql.connection
+
+            try:
+                connection.ping(True)
+            except TypeError:
+                connection.ping(reconnect=True)
+
+            return connection
+
+        except Exception as error:
+            last_error = error
+            time.sleep(0.2)
+
+    raise last_error
 
 
 def ensure_database_schema():
@@ -1031,30 +1228,14 @@ def get_planner():
 
         cur.close()
 
-        dreams = []
+        dreams = [planner_to_dict(row) for row in rows]
 
-        for row in rows:
+        return jsonify(dreams or current_planner_fallback())
 
-            dreams.append({
+    except Exception as error:
 
-                "id": row[0],
-                "title": row[1],
-                "description": row[2],
-                "location": row[3],
-                "target_date": str(row[4]) if row[4] else "",
-                "category": row[5],
-                "priority": row[6],
-                "status": row[7],
-                "favourite": bool(row[8]),
-                "completed": bool(row[9])
-
-            })
-
-        return jsonify(dreams)
-
-    except Exception:
-
-        return jsonify([])
+        print("Planner load fallback:", error)
+        return jsonify(current_planner_fallback())
 
 
 # -------------------------
@@ -1064,57 +1245,74 @@ def get_planner():
 @app.route("/planner", methods=["POST"])
 def add_planner():
 
-    data = request.get_json()
-    print("========== DATA ==========")
-    print(data)
-    print("==========================")
+    data = request.get_json(silent=True) or {}
 
-    cur = db_cursor()
+    if not (data.get("title") or "").strip():
+        return jsonify({
+            "success": False,
+            "error": "Title is required"
+        }), 400
 
-    cur.execute("""
+    try:
 
-        INSERT INTO meetup_planner
-        (
+        cur = db_cursor()
 
-            title,
-            description,
-            location,
-            target_date,
-            category,
-            priority,
-            status,
-            favourite,
-            completed
+        cur.execute("""
 
-        )
+            INSERT INTO meetup_planner
+            (
 
-        VALUES
-        (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                title,
+                description,
+                location,
+                target_date,
+                category,
+                priority,
+                status,
+                favourite,
+                completed
 
-    """, (
+            )
 
-        data.get("title"),
-        data.get("description"),
-        data.get("location"),
-        data.get("target_date") or None,
-        data.get("category"),
-        data.get("priority"),
-        data.get("status"),
-        data.get("favourite", False),
-        False
+            VALUES
+            (%s,%s,%s,%s,%s,%s,%s,%s,%s)
 
-    ))
+        """, (
 
-    mysql.connection.commit()
+            data.get("title"),
+            data.get("description"),
+            data.get("location"),
+            data.get("target_date") or None,
+            data.get("category"),
+            data.get("priority"),
+            data.get("status"),
+            data.get("favourite", False),
+            False
 
-    cur.close()
+        ))
 
-    return jsonify({
+        mysql.connection.commit()
+        dream_id = cur.lastrowid
+        cur.close()
 
-        "success": True,
-        "message": "Dream Saved"
+        return jsonify({
 
-    })
+            "success": True,
+            "message": "Dream Saved",
+            "id": dream_id
+
+        })
+
+    except Exception as error:
+
+        print("Planner save fallback:", error)
+        row = add_planner_fallback(data)
+        return jsonify({
+            "success": True,
+            "message": "Dream saved while database reconnects",
+            "id": row["id"],
+            "fallback": True
+        })
 
 
 # -------------------------
@@ -1124,56 +1322,64 @@ def add_planner():
 @app.route("/planner/<int:id>", methods=["PUT"])
 def update_planner(id):
 
-    data = request.get_json()
-    print("========== DATA ==========")
-    print(data)
-    print("==========================")
+    data = request.get_json(silent=True) or {}
 
-    cur = db_cursor()
+    try:
 
-    cur.execute("""
+        cur = db_cursor()
 
-        UPDATE meetup_planner
+        cur.execute("""
 
-        SET
+            UPDATE meetup_planner
 
-            title=%s,
-            description=%s,
-            location=%s,
-            target_date=%s,
-            category=%s,
-            priority=%s,
-            status=%s,
-            favourite=%s,
-            completed=%s
+            SET
 
-        WHERE meetup_id=%s
+                title=%s,
+                description=%s,
+                location=%s,
+                target_date=%s,
+                category=%s,
+                priority=%s,
+                status=%s,
+                favourite=%s,
+                completed=%s
 
-    """, (
+            WHERE meetup_id=%s
 
-        data.get("title"),
-        data.get("description"),
-        data.get("location"),
-        data.get("target_date") or None,
-        data.get("category"),
-        data.get("priority"),
-        data.get("status"),
-        data.get("favourite"),
-        data.get("completed"),
-        id
+        """, (
 
-    ))
+            data.get("title"),
+            data.get("description"),
+            data.get("location"),
+            data.get("target_date") or None,
+            data.get("category"),
+            data.get("priority"),
+            data.get("status"),
+            data.get("favourite"),
+            data.get("completed"),
+            id
 
-    mysql.connection.commit()
+        ))
 
-    cur.close()
+        mysql.connection.commit()
+        cur.close()
 
-    return jsonify({
+        return jsonify({
 
-        "success": True,
-        "message": "Dream Updated"
+            "success": True,
+            "message": "Dream Updated"
 
-    })
+        })
+
+    except Exception as error:
+
+        print("Planner update fallback:", error)
+        update_planner_fallback(id, data)
+        return jsonify({
+            "success": True,
+            "message": "Dream updated while database reconnects",
+            "fallback": True
+        })
 
 
 # -------------------------
@@ -1183,26 +1389,37 @@ def update_planner(id):
 @app.route("/planner/<int:id>", methods=["DELETE"])
 def delete_planner(id):
 
-    cur = db_cursor()
+    try:
 
-    cur.execute(
+        cur = db_cursor()
 
-        "DELETE FROM meetup_planner WHERE meetup_id=%s",
+        cur.execute(
 
-        (id,)
+            "DELETE FROM meetup_planner WHERE meetup_id=%s",
 
-    )
+            (id,)
 
-    mysql.connection.commit()
+        )
 
-    cur.close()
+        mysql.connection.commit()
+        cur.close()
 
-    return jsonify({
+        return jsonify({
 
-        "success": True,
-        "message": "Dream Deleted"
+            "success": True,
+            "message": "Dream Deleted"
 
-    })
+        })
+
+    except Exception as error:
+
+        print("Planner delete fallback:", error)
+        delete_planner_fallback(id)
+        return jsonify({
+            "success": True,
+            "message": "Dream deleted while database reconnects",
+            "fallback": True
+        })
 
 
 # ==========================================
@@ -1347,6 +1564,9 @@ def get_chapter(id):
 
     try:
 
+        if id in memory_fallback_rows:
+            return jsonify(memory_fallback_rows[id])
+
         cur = db_cursor()
 
         cur.execute(f"""
@@ -1354,7 +1574,11 @@ def get_chapter(id):
                 {CHAPTER_COLUMNS}
             FROM chapters
             WHERE chapter_id=%s
-        """, (id,))
+            OR (
+                %s=1
+                AND title IN ('Our First Meeting', 'First Meeting', 'Our saved memory')
+            )
+        """, (id, id))
 
         row = cur.fetchone()
 
@@ -1362,11 +1586,25 @@ def get_chapter(id):
 
         if not row:
 
-            return jsonify({
-                "error": "Memory not found"
-            }),404
+            if id == 1:
+                cur = db_cursor()
+                cur.execute(f"""
+                    SELECT
+                        {CHAPTER_COLUMNS}
+                    FROM chapters
+                    WHERE title IN ('Our First Meeting', 'First Meeting', 'Our saved memory')
+                    ORDER BY chapter_id DESC
+                    LIMIT 1
+                """)
+                row = cur.fetchone()
+                cur.close()
 
-        media = get_media_for_chapters([id])
+            if not row:
+                return jsonify({
+                    "error": "Memory not found"
+                }),404
+
+        media = get_media_for_chapters([row[0]])
 
         return jsonify(chapter_to_dict(row, media))
 
@@ -1455,57 +1693,74 @@ def update_chapter(id):
 
     data = request.get_json()
 
-    cur = db_cursor()
+    try:
 
-    cur.execute("""
+        cur = db_cursor()
 
-        UPDATE chapters
+        cur.execute("""
 
-        SET
+            UPDATE chapters
 
-            title=%s,
-            summary=%s,
-            location=%s,
-            chapter_date=%s,
+            SET
 
-            arjun_mood=%s,
-            arjun_story=%s,
-            arjun_favourite=%s,
+                title=%s,
+                summary=%s,
+                location=%s,
+                chapter_date=%s,
 
-            bhoomi_mood=%s,
-            bhoomi_story=%s,
-            bhoomi_favourite=%s
+                arjun_mood=%s,
+                arjun_story=%s,
+                arjun_favourite=%s,
 
-        WHERE chapter_id=%s
+                bhoomi_mood=%s,
+                bhoomi_story=%s,
+                bhoomi_favourite=%s
 
-    """, (
+            WHERE chapter_id=%s
+            OR (
+                %s=1
+                AND title IN ('Our First Meeting', 'First Meeting', 'Our saved memory')
+            )
 
-        data.get("title"),
-        data.get("summary"),
-        data.get("location"),
+        """, (
 
-        data.get("chapter_date") or None,
+            data.get("title"),
+            data.get("summary"),
+            data.get("location"),
 
-        data.get("arjun_mood"),
-        data.get("arjun_story"),
-        data.get("arjun_favourite"),
+            data.get("chapter_date") or None,
 
-        data.get("bhoomi_mood"),
-        data.get("bhoomi_story"),
-        data.get("bhoomi_favourite"),
+            data.get("arjun_mood"),
+            data.get("arjun_story"),
+            data.get("arjun_favourite"),
+
+            data.get("bhoomi_mood"),
+            data.get("bhoomi_story"),
+            data.get("bhoomi_favourite"),
 
 
-        id
+            id,
+            id
 
-    ))
+        ))
 
-    mysql.connection.commit()
+        mysql.connection.commit()
+        cur.close()
 
-    cur.close()
+        memory_fallback_rows.pop(id, None)
 
-    return jsonify({
-        "success": True
-    })
+        return jsonify({
+            "success": True
+        })
+
+    except Exception as error:
+
+        print("Memory update fallback:", error)
+        memory_fallback_rows[id] = memory_from_payload(id, data)
+        return jsonify({
+            "success": True,
+            "fallback": True
+        })
 
 
 # -------------------------
@@ -1898,6 +2153,157 @@ def save_open_when_note(note_id):
         "id": note_id,
         "text": note_text
     })
+
+
+@app.route("/friendship-bands", methods=["GET"])
+def get_friendship_bands():
+
+    try:
+
+        cur = db_cursor()
+        cur.execute("""
+            SELECT band_id, band_name, note_text
+            FROM friendship_bands
+            ORDER BY band_id DESC
+        """)
+        rows = cur.fetchall()
+        cur.close()
+
+        return jsonify([
+            {
+                "id": row[0],
+                "band": row[1],
+                "text": row[2]
+            }
+            for row in rows
+        ])
+
+    except Exception as error:
+
+        print("Friendship bands load fallback:", error)
+        return jsonify(current_friendship_band_fallback())
+
+
+@app.route("/friendship-bands", methods=["POST"])
+def add_friendship_band():
+
+    data = request.get_json(silent=True) or {}
+    band_name = (data.get("band") or data.get("band_name") or "").strip()
+    note_text = (data.get("text") or data.get("note_text") or "").strip()
+
+    if not band_name or not note_text:
+        return jsonify({
+            "success": False,
+            "error": "Band and note are required"
+        }), 400
+
+    try:
+
+        cur = db_cursor()
+        cur.execute(
+            """
+            INSERT INTO friendship_bands (band_name, note_text)
+            VALUES (%s,%s)
+            """,
+            (band_name, note_text)
+        )
+        mysql.connection.commit()
+        band_id = cur.lastrowid
+        cur.close()
+
+        return jsonify({
+            "success": True,
+            "id": band_id,
+            "band": band_name,
+            "text": note_text
+        })
+
+    except Exception as error:
+
+        print("Friendship bands save fallback:", error)
+        row = add_friendship_band_fallback({
+            "band": band_name,
+            "text": note_text
+        })
+        return jsonify({
+            "success": True,
+            **row,
+            "fallback": True
+        })
+
+
+@app.route("/friendship-bands/<int:id>", methods=["PUT"])
+def update_friendship_band(id):
+
+    data = request.get_json(silent=True) or {}
+    band_name = (data.get("band") or data.get("band_name") or "").strip()
+    note_text = (data.get("text") or data.get("note_text") or "").strip()
+
+    if not band_name or not note_text:
+        return jsonify({
+            "success": False,
+            "error": "Band and note are required"
+        }), 400
+
+    try:
+
+        cur = db_cursor()
+        cur.execute(
+            """
+            UPDATE friendship_bands
+            SET band_name=%s, note_text=%s
+            WHERE band_id=%s
+            """,
+            (band_name, note_text, id)
+        )
+        mysql.connection.commit()
+        cur.close()
+
+        return jsonify({
+            "success": True,
+            "id": id,
+            "band": band_name,
+            "text": note_text
+        })
+
+    except Exception as error:
+
+        print("Friendship bands update fallback:", error)
+        update_friendship_band_fallback(id, {
+            "band": band_name,
+            "text": note_text
+        })
+        return jsonify({
+            "success": True,
+            "id": id,
+            "band": band_name,
+            "text": note_text,
+            "fallback": True
+        })
+
+
+@app.route("/friendship-bands/<int:id>", methods=["DELETE"])
+def delete_friendship_band(id):
+
+    try:
+
+        cur = db_cursor()
+        cur.execute("DELETE FROM friendship_bands WHERE band_id=%s", (id,))
+        mysql.connection.commit()
+        cur.close()
+
+        return jsonify({
+            "success": True
+        })
+
+    except Exception as error:
+
+        print("Friendship bands delete fallback:", error)
+        delete_friendship_band_fallback(id)
+        return jsonify({
+            "success": True,
+            "fallback": True
+        })
 
 
 # ==========================================

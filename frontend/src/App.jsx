@@ -54,6 +54,7 @@ function App() {
         <Route path="/photo-wall" element={<ProtectedRoute><PhotoWall /></ProtectedRoute>} />
         <Route path="/open-when" element={<ProtectedRoute><OpenWhen /></ProtectedRoute>} />
         <Route path="/birthday" element={<ProtectedRoute><Birthday /></ProtectedRoute>} />
+        <Route path="/surprise" element={<ProtectedRoute><FriendshipBands /></ProtectedRoute>} />
         <Route path="/friendship-bands" element={<ProtectedRoute><FriendshipBands /></ProtectedRoute>} />
         <Route path="/playlist" element={<ProtectedRoute><Playlist /></ProtectedRoute>} />
         <Route path="/ppt" element={<ProtectedRoute><Ppt /></ProtectedRoute>} />

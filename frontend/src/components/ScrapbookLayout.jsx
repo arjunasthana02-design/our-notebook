@@ -94,12 +94,12 @@ export default function ScrapbookLayout({
           </Link>
 
           <Link
-            to="/friendship-bands"
+            to="/surprise"
             className={`scrapbook-link ${
-              location.pathname === "/friendship-bands" ? "active-link" : ""
+              location.pathname === "/surprise" || location.pathname === "/friendship-bands" ? "active-link" : ""
             }`}
           >
-            Bands
+            Surprise
           </Link>
 
           <Link

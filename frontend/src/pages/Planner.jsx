@@ -13,6 +13,7 @@ export default function Planner() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [dreams, setDreams] = useState([]);
+  const [localDreams, setLocalDreams] = useState([]);
 
   const [form, setForm] = useState({
     title: "",
@@ -38,7 +39,12 @@ export default function Planner() {
 
       const data = await res.json();
 
-      setDreams(restorePlannerWhenMissing(data));
+      const restoredData = restorePlannerWhenMissing(data);
+      const localIds = new Set(localDreams.map((dream) => dream.id));
+      setDreams([
+        ...localDreams,
+        ...restoredData.filter((dream) => !localIds.has(dream.id))
+      ]);
 
     } catch (err) {
 
@@ -86,7 +92,7 @@ export default function Planner() {
 
       if (editingId !== null) {
 
-        await apiFetch(`/planner/${editingId}`, {
+        const response = await apiFetch(`/planner/${editingId}`, {
 
           method: "PUT",
 
@@ -104,9 +110,30 @@ export default function Planner() {
 
         });
 
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Failed to update dream.");
+        }
+
+        setLocalDreams((current) =>
+          current.map((dream) =>
+            dream.id === editingId
+              ? { ...dream, ...dreamData, completed: dream.completed || false }
+              : dream
+          )
+        );
+        setDreams((current) =>
+          current.map((dream) =>
+            dream.id === editingId
+              ? { ...dream, ...dreamData, completed: dream.completed || false }
+              : dream
+          )
+        );
+
       } else {
 
-        await apiFetch("/planner", {
+        const response = await apiFetch("/planner", {
 
           method: "POST",
 
@@ -118,9 +145,22 @@ export default function Planner() {
 
         });
 
-      }
+        const result = await response.json();
 
-      await loadDreams();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Failed to save dream.");
+        }
+
+        const newDream = {
+          id: result.id || Date.now(),
+          ...dreamData,
+          completed: false
+        };
+
+        setLocalDreams((current) => [newDream, ...current]);
+        setDreams((current) => [newDream, ...current]);
+
+      }
 
       setForm({
 
@@ -156,9 +196,18 @@ export default function Planner() {
 
     try {
 
-      await apiFetch(`/planner/${id}`, {
+      const response = await apiFetch(`/planner/${id}`, {
         method: "DELETE"
       });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to delete dream.");
+      }
+
+      setLocalDreams((current) => current.filter((dream) => dream.id !== id));
+      setDreams((current) => current.filter((dream) => dream.id !== id));
 
       await loadDreams();
 
@@ -208,7 +257,7 @@ export default function Planner() {
 
     try {
 
-      await apiFetch(`/planner/${id}`, {
+      const response = await apiFetch(`/planner/${id}`, {
 
         method: "PUT",
 
@@ -231,6 +280,23 @@ export default function Planner() {
         })
 
       });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to update favourite.");
+      }
+
+      setLocalDreams((current) =>
+        current.map((item) =>
+          item.id === id ? { ...item, favourite: !dream.favourite } : item
+        )
+      );
+      setDreams((current) =>
+        current.map((item) =>
+          item.id === id ? { ...item, favourite: !dream.favourite } : item
+        )
+      );
 
       await loadDreams();
 
