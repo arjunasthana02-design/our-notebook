@@ -10,61 +10,64 @@ const bands = [
     name: "Happy Bhoomi Band",
     detail: "Smiley face band",
     colors: ["#ffe781", "#fff8c7", "#6ac7ff"],
-    charm: "smile"
+    charm: "smile",
+    image: ""
   },
   {
     name: "Marvel Bhoomi Band",
     detail: "Spiderman band",
     colors: ["#d71920", "#1f65b7", "#111827"],
-    charm: "web"
+    charm: "web",
+    image: "/images/surprise/bands/spiderman.png"
   },
   {
     name: "Cute Bhoomi Band",
-    detail: "Cute band with flowers",
+    detail: "Cute rose band",
     colors: ["#ffc8e5", "#fff7fb", "#8fd6a4"],
-    charm: "flowers"
+    charm: "rose",
+    image: "/images/surprise/bands/rose.png"
   },
   {
     name: "Rockstar Bhoomi Band",
     detail: "Band with a guitar",
     colors: ["#101827", "#72b7ff", "#f5d067"],
-    charm: "guitar"
+    charm: "rockstar",
+    image: "/images/surprise/bands/rockstar.png"
   },
   {
     name: "K Drama Band",
     detail: "Soft blue drama-heart band",
     colors: ["#b9e8ff", "#ffffff", "#ff9fc8"],
-    charm: "heart"
+    charm: "kdrama",
+    image: "/images/surprise/bands/kdrama-heart.png"
   },
   {
     name: "Cinderella Bhoomi Band",
     detail: "Glass slipper blue band",
     colors: ["#e9fbff", "#8dd7ff", "#2f80c1"],
-    charm: "slipper"
+    charm: "slipper",
+    image: "/images/surprise/bands/glass-shoe.png"
   },
   {
     name: "Princess Bhoomi Band",
     detail: "Tiny crown band",
     colors: ["#a7dbff", "#f7d36f", "#ffffff"],
-    charm: "crown"
+    charm: "crown",
+    image: "/images/surprise/bands/crown.png"
   },
   {
-    name: "Coffee Date Band",
-    detail: "Warm blue cafe band",
+    name: "Coffee Bhoomi Band",
+    detail: "Cold coffee band",
     colors: ["#6fb7e8", "#f3e2cf", "#7c4f3b"],
-    charm: "cup"
-  },
-  {
-    name: "Noida Walk Band",
-    detail: "Little walking-memory band",
-    colors: ["#9bdcff", "#305f93", "#e8fff5"],
-    charm: "steps"
+    charm: "coffee",
+    image: "/images/surprise/bands/coffee.png"
   },
   {
     name: "Laughing Bhoomi Band",
     detail: "For the laugh that fixes everything",
     colors: ["#fff4a8", "#79d6ff", "#ffffff"],
-    charm: "spark"
+    charm: "srk",
+    image: "/images/surprise/bands/srk.png"
   }
 ];
 
@@ -79,23 +82,6 @@ function readLocalNotes() {
 
 function saveLocalNotes(notes) {
   localStorage.setItem(NOTE_KEY, JSON.stringify(notes));
-}
-
-function charmText(charm) {
-  const labels = {
-    smile: ":)",
-    web: "WEB",
-    flowers: "FLOWERS",
-    guitar: "GUITAR",
-    heart: "HEART",
-    slipper: "SLIPPER",
-    crown: "CROWN",
-    cup: "CAFE",
-    steps: "WALK",
-    spark: "SPARK"
-  };
-
-  return labels[charm] || "BAND";
 }
 
 export default function FriendshipBands() {
@@ -260,13 +246,19 @@ export default function FriendshipBands() {
         <div className="band-workbench">
           <section className="band-picker">
             <div className="band-preview" style={bandStyle}>
+              <div className={`band-image-frame ${selected.charm}`}>
+                {selected.image ? (
+                  <img src={selected.image} alt={selected.name} />
+                ) : (
+                  <span className="smiley-face">:)</span>
+                )}
+              </div>
               <div className={`real-band ${selected.charm}`}>
                 <span className="band-thread thread-one" />
                 <span className="band-thread thread-two" />
                 <span className="band-thread thread-three" />
                 <span className="band-knot left-knot" />
                 <span className="band-knot right-knot" />
-                <strong>{charmText(selected.charm)}</strong>
               </div>
             </div>
 
@@ -322,6 +314,13 @@ export default function FriendshipBands() {
                 "--band-c": band.colors[2]
               }}
             >
+              <span className="tiny-band-image">
+                {band.image ? (
+                  <img src={band.image} alt="" />
+                ) : (
+                  <em>:)</em>
+                )}
+              </span>
               <span />
               <strong>{band.name}</strong>
               <small>{band.detail}</small>

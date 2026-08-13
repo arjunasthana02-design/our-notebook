@@ -50,6 +50,41 @@ export const restoredPlannerItems = [
   }
 ];
 
+const MEMORY_BACKUP_KEY = "notebook-memory-backups";
+
+export function readMemoryBackups() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(MEMORY_BACKUP_KEY) || "{}");
+    return saved && typeof saved === "object" ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writeMemoryBackup(memory) {
+  if (!memory?.id) return;
+
+  const backups = readMemoryBackups();
+  backups[String(memory.id)] = memory;
+  localStorage.setItem(MEMORY_BACKUP_KEY, JSON.stringify(backups));
+}
+
+export function mergeMemoryBackup(memory, id) {
+  const backups = readMemoryBackups();
+  const backup = backups[String(id)] || backups[String(memory?.id)];
+
+  if (!backup) {
+    return memory;
+  }
+
+  return {
+    ...memory,
+    ...backup,
+    photos: memory?.photos?.length ? memory.photos : backup.photos,
+    videos: memory?.videos?.length ? memory.videos : backup.videos
+  };
+}
+
 export function restoreMemoriesWhenMissing(data) {
   if (!Array.isArray(data) || data.length === 0) {
     return restoredMemories;
@@ -75,11 +110,11 @@ export function restorePlannerWhenMissing(data) {
 
 export function restoreMemoryWhenMissing(memory, id) {
   if (!memory || memory.title === "Our saved memory") {
-    return {
+    return mergeMemoryBackup({
       ...restoredMemories[0],
       id: Number(id) || restoredMemories[0].id
-    };
+    }, id);
   }
 
-  return memory;
+  return mergeMemoryBackup(memory, id);
 }

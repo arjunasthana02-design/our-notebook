@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ScrapbookLayout from "../components/ScrapbookLayout";
 import { apiFetch } from "../services/api";
+import { writeMemoryBackup } from "../data/restoredNotebookData";
 
 export default function AddMemory() {
 
@@ -160,6 +161,19 @@ export default function AddMemory() {
       }
 
       const chapterId = isEditing ? id : result.chapter_id;
+      writeMemoryBackup({
+        id: Number(chapterId),
+        title: form.title,
+        summary: form.summary,
+        location: form.location,
+        chapter_date: form.chapter_date,
+        bhoomi_mood: form.bhoomi_mood,
+        bhoomi_favourite: form.bhoomi_favourite,
+        bhoomi_story: form.bhoomi_story,
+        arjun_mood: form.arjun_mood,
+        arjun_favourite: form.arjun_favourite,
+        arjun_story: form.arjun_story
+      });
 
       for (const photo of photos) {
 
